@@ -1,7 +1,7 @@
 /*
  * PoemModal.tsx - 诗词详情弹窗
- * 设计：卷轴展开动画，宣纸质感，包含诗词原文/赏析/课外知识/填词游戏入口
- * 注释设计：注释全部放在诗词底部，点击词语时对应注释高亮展开，其余折叠
+ * 注释设计：底部有"展开注释"/"收起注释"切换按钮，展开时所有注释一次性显示
+ * 每条注释用菱形符号（◆）标注，按诗句分组排列
  */
 
 import { useState } from 'react';
@@ -16,7 +16,7 @@ interface PoemModalProps {
   onStartGame: (poem: Poem) => void;
 }
 
-// 诗词原文 + 底部注释区
+// 诗词原文 + 底部整体注释区
 function PoemWithAnnotations({
   poem,
   annotations,
@@ -24,11 +24,10 @@ function PoemWithAnnotations({
   poem: Poem;
   annotations: Record<string, string>;
 }) {
-  const [activeWord, setActiveWord] = useState<string | null>(null);
+  const [showAnnotations, setShowAnnotations] = useState(false);
+  const hasAnnotations = (poem.annotations ?? []).length > 0;
 
-  const hasAnnotations = Object.keys(annotations).length > 0;
-
-  // 将诗句拆分为可点击词语和普通字符
+  // 将诗句拆分，有注释的词语加下划线
   const renderLine = (line: string, lineIndex: number) => {
     const chars = line.split('');
     const result: React.ReactNode[] = [];
@@ -36,25 +35,16 @@ function PoemWithAnnotations({
 
     while (i < chars.length) {
       let matched = false;
-      // 尝试匹配最长注释词（最多4字）
       for (let len = Math.min(4, chars.length - i); len >= 1; len--) {
         const word = chars.slice(i, i + len).join('');
         if (annotations[word]) {
-          const isActive = activeWord === word;
           result.push(
             <span
               key={`${lineIndex}-${i}`}
-              className="relative inline-block cursor-pointer select-none"
+              className="inline-block"
               style={{
-                color: isActive ? '#C0392B' : '#8B2500',
-                borderBottom: isActive ? '2px solid #C0392B' : '1px dotted #C0392B',
-                fontWeight: isActive ? '600' : 'normal',
-                transition: 'all 0.15s',
-                padding: '0 1px',
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
-                setActiveWord(activeWord === word ? null : word);
+                color: '#1a1a1a',
+                borderBottom: '1px solid #C0392B',
               }}
             >
               {word}
@@ -107,93 +97,75 @@ function PoemWithAnnotations({
         </div>
       </div>
 
-      {/* 底部注释区 */}
+      {/* 注释展开/收起切换按钮 */}
       {hasAnnotations && (
-        <div
-          className="rounded-sm overflow-hidden"
-          style={{ border: '1px solid #c9b49a', background: 'rgba(245,237,214,0.4)' }}
-        >
-          {/* 注释区标题 */}
-          <div
-            className="flex items-center gap-2 px-4 py-2 border-b border-[#c9b49a]/50"
-            style={{ background: 'rgba(192,57,43,0.06)' }}
+        <div className="mb-3">
+          <button
+            onClick={() => setShowAnnotations(!showAnnotations)}
+            className="flex items-center gap-2 w-full py-1.5"
+            style={{ fontFamily: 'Noto Serif SC, serif' }}
           >
+            {/* 左线 */}
+            <span className="flex-1 h-px" style={{ background: '#c9b49a' }} />
             <span
-              className="text-xs font-semibold text-[#C0392B]"
-              style={{ fontFamily: 'Ma Shan Zheng, serif', letterSpacing: '0.15em', fontSize: '0.85rem' }}
+              className="flex items-center gap-1.5 text-xs px-2"
+              style={{ color: '#8B6914', whiteSpace: 'nowrap' }}
             >
-              注 释
+              {showAnnotations
+                ? <><ChevronUp className="w-3 h-3" />收起注释</>
+                : <><ChevronDown className="w-3 h-3" />展开注释</>
+              }
             </span>
-            <span className="text-xs text-[#8B6914]/60" style={{ fontFamily: 'Noto Serif SC, serif' }}>
-              · 点击词语查看详解
-            </span>
-          </div>
+            {/* 右线 */}
+            <span className="flex-1 h-px" style={{ background: '#c9b49a' }} />
+          </button>
 
-          {/* 注释列表 */}
-          <div className="divide-y divide-[#c9b49a]/30">
-            {(poem.annotations ?? []).map((ann: Annotation, idx: number) => {
-              const isExpanded = activeWord === ann.word;
-              return (
-                <div key={idx}>
-                  {/* 注释条目头部（可点击展开/折叠） */}
-                  <button
-                    className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-[#f5edd6]/60 transition-colors"
-                    onClick={() => setActiveWord(isExpanded ? null : ann.word)}
-                  >
-                    <div className="flex items-center gap-3">
-                      {/* 序号 */}
+          {/* 注释内容 */}
+          <AnimatePresence>
+            {showAnnotations && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.28, ease: 'easeInOut' }}
+                className="overflow-hidden"
+              >
+                <div
+                  className="rounded-sm py-3 px-4 space-y-2.5"
+                  style={{
+                    background: 'rgba(245,237,214,0.5)',
+                    border: '1px solid #c9b49a',
+                  }}
+                >
+                  {(poem.annotations ?? []).map((ann: Annotation, idx: number) => (
+                    <div
+                      key={idx}
+                      className="flex items-start gap-2 text-sm leading-6"
+                      style={{
+                        fontFamily: 'Noto Serif SC, serif',
+                        color: '#3d2b1f',
+                        borderBottom: idx < (poem.annotations?.length ?? 0) - 1 ? '1px solid rgba(201,180,154,0.4)' : 'none',
+                        paddingBottom: idx < (poem.annotations?.length ?? 0) - 1 ? '0.5rem' : '0',
+                      }}
+                    >
+                      {/* 菱形符号 */}
                       <span
-                        className="w-5 h-5 rounded-full flex items-center justify-center text-xs text-white shrink-0"
-                        style={{ background: isExpanded ? '#C0392B' : '#8B6914', fontFamily: 'Noto Serif SC, serif', transition: 'background 0.2s' }}
+                        className="shrink-0 mt-0.5"
+                        style={{ color: '#C0392B', fontSize: '0.7rem', lineHeight: '1.6' }}
                       >
-                        {idx + 1}
+                        ◆
                       </span>
-                      {/* 词语 */}
-                      <span
-                        className="text-sm font-semibold"
-                        style={{
-                          fontFamily: 'Ma Shan Zheng, serif',
-                          color: isExpanded ? '#C0392B' : '#3d2b1f',
-                          letterSpacing: '0.1em',
-                          fontSize: '0.95rem',
-                          transition: 'color 0.2s',
-                        }}
-                      >
-                        {ann.word}
+                      <span>
+                        <span style={{ color: '#C0392B', fontWeight: '600' }}>{ann.word}</span>
+                        <span style={{ color: '#8B6914' }}>：</span>
+                        {ann.note}
                       </span>
                     </div>
-                    {isExpanded
-                      ? <ChevronUp className="w-3.5 h-3.5 text-[#C0392B] shrink-0" />
-                      : <ChevronDown className="w-3.5 h-3.5 text-[#8B6914]/60 shrink-0" />
-                    }
-                  </button>
-
-                  {/* 注释内容（展开时显示） */}
-                  <AnimatePresence>
-                    {isExpanded && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: 'auto', opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        transition={{ duration: 0.22 }}
-                        className="overflow-hidden"
-                      >
-                        <div
-                          className="px-4 pb-3 pt-1 text-sm text-[#3d2b1f] leading-7 border-t border-[#C0392B]/20"
-                          style={{
-                            fontFamily: 'Noto Serif SC, serif',
-                            background: 'rgba(192,57,43,0.04)',
-                          }}
-                        >
-                          {ann.note}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  ))}
                 </div>
-              );
-            })}
-          </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
     </div>
@@ -333,7 +305,6 @@ export default function PoemModal({ poem, location, onClose, onStartGame }: Poem
                     {poem.appreciation}
                   </div>
                   
-                  {/* 底部填词按钮 */}
                   <div className="flex justify-end mt-6">
                     <button
                       onClick={() => onStartGame(poem)}
@@ -410,7 +381,6 @@ export default function PoemModal({ poem, location, onClose, onStartGame }: Poem
                     </motion.div>
                   ))}
                   
-                  {/* 底部填词按钮 */}
                   <div className="flex justify-end mt-4">
                     <button
                       onClick={() => onStartGame(poem)}

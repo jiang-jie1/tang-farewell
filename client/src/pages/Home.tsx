@@ -197,7 +197,7 @@ export default function Home() {
             fontSize: '11px',
           }}
         >
-          {isAgentOpen ? '收起' : '问诗仙'}
+          {isAgentOpen ? '收起' : '问引路人'}
         </div>
       </motion.button>
 

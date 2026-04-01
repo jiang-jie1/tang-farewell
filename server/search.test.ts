@@ -237,3 +237,191 @@ describe("搜索功能", () => {
     });
   });
 });
+
+// 新增地点数据验证测试
+describe("新增地点数据验证", () => {
+  // 模拟新增地点数据
+  const newLocations: Location[] = [
+    {
+      id: "jingmen",
+      modernName: "荆门",
+      ancientName: "荆门山",
+      province: "湖北省",
+      category: "river",
+      poems: [
+        {
+          id: "du_jingmen_songbie",
+          title: "渡荆门送别",
+          author: "李白",
+          dynasty: "唐",
+          lines: ["渡远荆门外，", "来从楚国游。", "山随平野尽，", "江入大荒流。", "月下飞天镜，", "云生结海楼。", "仍怜故乡水，", "万里送行舟。"],
+        },
+      ],
+    },
+    {
+      id: "suzhou",
+      modernName: "苏州",
+      ancientName: "姑苏",
+      province: "江苏省",
+      category: "river",
+      poems: [
+        {
+          id: "feng_qiao_ye_bo",
+          title: "枫桥夜泊",
+          author: "张继",
+          dynasty: "唐",
+          lines: ["月落乌啼霜满天，", "江枫渔火对愁眠。", "姑苏城外寒山寺，", "夜半钟声到客船。"],
+        },
+        {
+          id: "song_li_dan",
+          title: "寄李儋元锡",
+          author: "韦应物",
+          dynasty: "唐",
+          lines: ["去年花里逢君别，", "今日花开又一年。", "世事茫茫难自料，", "春愁黯黯独成眠。", "身多疾病思田里，", "邑有流亡愧俸钱。", "闻道欲来相问讯，", "西楼望月几回圆。"],
+        },
+      ],
+    },
+    {
+      id: "chongqing",
+      modernName: "重庆",
+      ancientName: "夔州（白帝城）",
+      province: "重庆市",
+      category: "river",
+      poems: [
+        {
+          id: "deng_gao",
+          title: "登高",
+          author: "杜甫",
+          dynasty: "唐",
+          lines: ["风急天高猿啸哀，", "渚清沙白鸟飞回。", "无边落木萧萧下，", "不尽长江滚滚来。", "万里悲秋常作客，", "百年多病独登台。", "艰难苦恨繁霜鬓，", "潦倒新停浊酒杯。"],
+        },
+      ],
+    },
+    {
+      id: "dunhuang",
+      modernName: "敦煌",
+      ancientName: "沙州（玉门关外）",
+      province: "甘肃省",
+      category: "frontier",
+      poems: [
+        {
+          id: "liangzhou_ci_wanhan",
+          title: "凉州词",
+          author: "王翰",
+          dynasty: "唐",
+          lines: ["葡萄美酒夜光杯，", "欲饮琵琶马上催。", "醉卧沙场君莫笑，", "古来征战几人回。"],
+        },
+      ],
+    },
+    {
+      id: "beijing",
+      modernName: "北京",
+      ancientName: "幽州（蓟城）",
+      province: "北京市",
+      category: "frontier",
+      poems: [
+        {
+          id: "deng_youzhou_tai",
+          title: "登幽州台歌",
+          author: "陈子昂",
+          dynasty: "唐",
+          lines: ["前不见古人，", "后不见来者。", "念天地之悠悠，", "独怆然而涕下。"],
+        },
+      ],
+    },
+  ];
+
+  it("荆门地点应可搜索到", () => {
+    const results = search("荆门", newLocations);
+    expect(results.length).toBeGreaterThan(0);
+    expect(results[0].location.id).toBe("jingmen");
+  });
+
+  it("搜索渡荆门送别应返回李白的诗", () => {
+    const results = search("渡荆门", newLocations);
+    const poemResult = results.find((r) => r.type === "poem");
+    expect(poemResult?.poem?.author).toBe("李白");
+  });
+
+  it("搜索姑苏应返回苏州地点", () => {
+    const results = search("姑苏", newLocations);
+    expect(results.length).toBeGreaterThan(0);
+    expect(results[0].location.id).toBe("suzhou");
+  });
+
+  it("搜索枫桥夜泊应返回张继的诗", () => {
+    const results = search("枫桥夜泊", newLocations);
+    const poemResult = results.find((r) => r.type === "poem");
+    expect(poemResult?.poem?.author).toBe("张继");
+    expect(poemResult?.location.id).toBe("suzhou");
+  });
+
+  it("搜索夜半钟声应返回枫桥夜泊", () => {
+    const results = search("夜半钟声", newLocations);
+    const poemResult = results.find((r) => r.type === "poem");
+    expect(poemResult?.poem?.id).toBe("feng_qiao_ye_bo");
+  });
+
+  it("搜索韦应物应返回寄李儋元锡", () => {
+    const results = search("韦应物", newLocations);
+    const poemResult = results.find((r) => r.type === "poem");
+    expect(poemResult?.poem?.author).toBe("韦应物");
+  });
+
+  it("搜索重庆应返回夔州地点", () => {
+    const results = search("重庆", newLocations);
+    expect(results.length).toBeGreaterThan(0);
+    expect(results[0].location.id).toBe("chongqing");
+  });
+
+  it("搜索登高应返回杜甫的诗", () => {
+    const results = search("登高", newLocations);
+    const poemResult = results.find((r) => r.type === "poem");
+    expect(poemResult?.poem?.author).toBe("杜甫");
+  });
+
+  it("搜索无边落木应返回登高", () => {
+    const results = search("无边落木", newLocations);
+    const poemResult = results.find((r) => r.type === "poem");
+    expect(poemResult?.poem?.id).toBe("deng_gao");
+  });
+
+  it("搜索葡萄美酒应返回王翰的凉州词", () => {
+    const results = search("葡萄美酒", newLocations);
+    const poemResult = results.find((r) => r.type === "poem");
+    expect(poemResult?.poem?.author).toBe("王翰");
+    expect(poemResult?.location.id).toBe("dunhuang");
+  });
+
+  it("搜索北京应返回幽州地点", () => {
+    const results = search("北京", newLocations);
+    expect(results.length).toBeGreaterThan(0);
+    expect(results[0].location.id).toBe("beijing");
+  });
+
+  it("搜索登幽州台歌应返回陈子昂的诗", () => {
+    const results = search("登幽州台歌", newLocations);
+    const poemResult = results.find((r) => r.type === "poem");
+    expect(poemResult?.poem?.author).toBe("陈子昂");
+  });
+
+  it("搜索前不见古人应返回登幽州台歌", () => {
+    const results = search("前不见古人", newLocations);
+    const poemResult = results.find((r) => r.type === "poem");
+    expect(poemResult?.poem?.id).toBe("deng_youzhou_tai");
+  });
+
+  it("苏州地点应有两首诗", () => {
+    const suzhou = newLocations.find(l => l.id === "suzhou");
+    expect(suzhou?.poems).toHaveLength(2);
+  });
+
+  it("所有新增地点都应有经纬度数据（通过id验证存在）", () => {
+    const expectedIds = ["jingmen", "suzhou", "chongqing", "dunhuang", "beijing"];
+    expectedIds.forEach(id => {
+      const loc = newLocations.find(l => l.id === id);
+      expect(loc).toBeDefined();
+      expect(loc?.poems.length).toBeGreaterThan(0);
+    });
+  });
+});
