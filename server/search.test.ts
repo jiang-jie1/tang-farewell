@@ -268,11 +268,11 @@ const testLocations: Location[] = [
     category: "river",
     poems: [
       {
-        id: "bu_suan_zi_song_bao",
-        title: "卜算子·送鲍浩然之浙东",
-        author: "王观",
-        dynasty: "宋",
-        lines: ["水是眼波横，", "山是眉峰聚。", "若到江南赶上春，", "千万和春住。"],
+        id: "song_du_shisi",
+        title: "送杜十四之江南",
+        author: "孟浩然",
+        dynasty: "唐",
+        lines: ["荆吴相接水为乡，", "君去春江正渺茂。", "日暮征帆何处泊，", "天涯一望断人肠。"],
       },
     ],
   },
@@ -442,10 +442,10 @@ describe("搜索功能", () => {
       expect(poemResult?.location.id).toBe("zhongnanshan");
     });
 
-    it("搜索卜算子应返回王观的词", () => {
-      const results = search("卜算子", testLocations);
+    it("搜索送杜十四应返回孟浩然的诗", () => {
+      const results = search("送杜十四", testLocations);
       const poemResult = results.find((r) => r.type === "poem");
-      expect(poemResult?.poem?.author).toBe("王观");
+      expect(poemResult?.poem?.author).toBe("孟浩然");
       expect(poemResult?.location.id).toBe("jiangnan");
     });
   });
@@ -518,10 +518,10 @@ describe("搜索功能", () => {
       expect(poemResult?.poem?.id).toBe("zeng_bie_er");
     });
 
-    it("搜索若到江南赶上春应返回卜算子", () => {
-      const results = search("若到江南赶上春", testLocations);
+    it("搜索荆吴相接应返回送杜十四之江南", () => {
+      const results = search("荆吴相接", testLocations);
       const poemResult = results.find((r) => r.type === "poem");
-      expect(poemResult?.poem?.id).toBe("bu_suan_zi_song_bao");
+      expect(poemResult?.poem?.id).toBe("song_du_shisi");
     });
 
     it("搜索春草明年绿应返回山中送别", () => {
