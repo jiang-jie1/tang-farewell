@@ -203,25 +203,20 @@ export default function TangMap({ onLocationSelect, highlightedLocationId, onMap
       const AMap = window.AMap;
       if (!AMap) throw new Error('AMap未加载');
 
-      // 创建地图实例
+      // 创建地图实例 - 使用古风地图样式
       const map = new AMap.Map(mapContainerRef.current, {
         zoom: 5,
         center: [105, 35.5],
-        mapStyle: 'amap://styles/whitesmoke', // 使用高德内置浅色样式作为基础
+        // macaron: 温暖米黄色调，最接近古地图风格
+        mapStyle: 'amap://styles/macaron',
         features: ['bg', 'road', 'building', 'point'],
         viewMode: '2D',
         lang: 'zh_cn',
         showLabel: true,
         showBuildingBlock: false,
-        // 禁用不必要的控件
         rotateEnable: false,
         pitchEnable: false,
       });
-
-      // 应用自定义古风样式 - 使用高德内置浅色样式
-      // 高德内置样式列表: whitesmoke, fresh, grey, dark, wine, macaron, blue, darkblue, graffiti, chalk, fresh
-      // whitesmoke 最接近宣纸色调，适合古风主题
-      map.setMapStyle('amap://styles/whitesmoke');
 
       // 添加比例尺
       const scale = new AMap.Scale({
@@ -231,6 +226,23 @@ export default function TangMap({ onLocationSelect, highlightedLocationId, onMap
       map.addControl(scale);
 
       mapRef.current = map;
+
+      // 隐藏高德地图版权标志（左下角的 logo 和版权信息）
+      // 注意：根据高德地图服务条款，商业应用应保留版权标识
+      // 如需商用，请联系高德获取授权
+      const hideAmapLogo = () => {
+        const style = document.createElement('style');
+        style.textContent = `
+          .amap-logo,
+          .amap-copyright {
+            display: none !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+          }
+        `;
+        document.head.appendChild(style);
+      };
+      hideAmapLogo();
 
       // 添加标注点
       locations.forEach(loc => {
