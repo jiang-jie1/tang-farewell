@@ -1,13 +1,13 @@
 /*
  * AncientAgent.tsx - 古风智能体对话组件
- * 设计：古风UI，支持文字输入和语音交互（语音通过Web Speech API）
+ * 设计：古风UI，支持文字输入和语音交互
+ * 语音流程：MediaRecorder录音 → base64上传S3 → Whisper转文字 → 填入输入框
  * API：调用火山引擎 Doubao 模型（通过后端代理）
- * 注意：此为前端组件，API调用通过后端 /api/chat 路由
  */
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Mic, MicOff, MessageSquare, Volume2, VolumeX, Bot } from 'lucide-react';
+import { X, Send, Mic, MicOff, MessageSquare, Volume2, VolumeX } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 
 interface Message {
@@ -21,21 +21,7 @@ interface AncientAgentProps {
   onClose: () => void;
 }
 
-const SYSTEM_PROMPT = `你是一位精通唐代诗词的古代文人学者，名为"诗仙引路人"。你博学多才，尤其擅长唐代送别诗的赏析与讲解。
-
-你的职责是：
-1. 帮助学生理解唐代送别诗的意境、典故和历史背景
-2. 解答关于诗词的各种问题，包括字词释义、修辞手法、诗人生平等
-3. 引导学生深入理解"送别"这一主题在唐代诗歌中的文化内涵
-4. 用生动有趣的方式讲解诗词知识，适合中学生学习
-
-你的语言风格：
-- 温文尔雅，偶尔引用古诗词
-- 讲解深入浅出，举例生动
-- 对学生的问题耐心解答
-- 可以适当使用"老夫""在下"等古风称谓，但不要过度文言化，保持易懂
-
-重点诗词：《送杜少府之任蜀州》（王勃）、《送元二使安西》（王维）、《黄鹤楼送孟浩然之广陵》（李白）、《凉州词》（王之涣）、《从军行》（王昌龄）、《芙蓉楼送辛渐》（王昌龄）等唐代送别诗。`;
+type VoiceState = 'idle' | 'recording' | 'uploading' | 'transcribing' | 'done' | 'error';
 
 export default function AncientAgent({ isOpen, onClose }: AncientAgentProps) {
   const [messages, setMessages] = useState<Message[]>([
@@ -47,24 +33,48 @@ export default function AncientAgent({ isOpen, onClose }: AncientAgentProps) {
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [inputMode, setInputMode] = useState<'text' | 'voice'>('text');
+
+  // 语音录音状态
+  const [voiceState, setVoiceState] = useState<VoiceState>('idle');
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const recognitionRef = useRef<any>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   useEffect(() => {
-    if (isOpen && inputRef.current) {
+    if (isOpen && inputMode === 'text' && inputRef.current) {
       setTimeout(() => inputRef.current?.focus(), 300);
     }
-  }, [isOpen]);
+  }, [isOpen, inputMode]);
+
+  // 切换到文字模式时停止录音
+  useEffect(() => {
+    if (inputMode === 'text') {
+      stopRecording();
+    }
+  }, [inputMode]);
+
+  // 组件卸载时清理
+  useEffect(() => {
+    return () => {
+      stopRecording();
+    };
+  }, []);
 
   const chatMutation = trpc.agent.chat.useMutation();
+  const uploadAudioMutation = trpc.agent.uploadAudio.useMutation();
+  const transcribeMutation = trpc.agent.transcribe.useMutation();
 
   const sendMessage = async (content: string) => {
     if (!content.trim() || isLoading) return;
@@ -75,7 +85,6 @@ export default function AncientAgent({ isOpen, onClose }: AncientAgentProps) {
     setIsLoading(true);
 
     try {
-      // 构建对话历史（不包含初始欢迎消息）
       const history = messages
         .filter(m => m.role === 'user' || (m.role === 'assistant' && messages.indexOf(m) > 0))
         .slice(-8)
@@ -88,7 +97,7 @@ export default function AncientAgent({ isOpen, onClose }: AncientAgentProps) {
 
       const rawReply = result.reply;
       const reply = typeof rawReply === 'string' ? rawReply : '抱歉，老夫一时语塞，请稍后再问。';
-      
+
       const assistantMsg: Message = {
         role: 'assistant',
         content: reply,
@@ -96,7 +105,6 @@ export default function AncientAgent({ isOpen, onClose }: AncientAgentProps) {
       };
       setMessages(prev => [...prev, assistantMsg]);
 
-      // 可选：语音朗读回复
       if (isSpeaking && 'speechSynthesis' in window) {
         const utterance = new SpeechSynthesisUtterance(reply);
         utterance.lang = 'zh-CN';
@@ -115,37 +123,167 @@ export default function AncientAgent({ isOpen, onClose }: AncientAgentProps) {
     }
   };
 
-  const handleVoiceInput = () => {
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      alert('您的浏览器不支持语音识别功能，请使用文字输入。');
+  const stopRecording = useCallback(() => {
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+      streamRef.current = null;
+    }
+    setRecordingSeconds(0);
+  }, []);
+
+  const startRecording = useCallback(async () => {
+    setVoiceError(null);
+    setVoiceState('idle');
+    audioChunksRef.current = [];
+
+    // 检查浏览器支持
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setVoiceError('您的浏览器不支持麦克风录音，请使用文字输入。');
+      setVoiceState('error');
       return;
     }
 
-    if (isListening) {
-      recognitionRef.current?.stop();
-      setIsListening(false);
-      return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+
+      // 选择支持的音频格式
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+        ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/webm')
+        ? 'audio/webm'
+        : MediaRecorder.isTypeSupported('audio/mp4')
+        ? 'audio/mp4'
+        : '';
+
+      const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+      mediaRecorderRef.current = recorder;
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
+      };
+
+      recorder.onstop = async () => {
+        // 清理麦克风
+        stream.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
+
+        if (audioChunksRef.current.length === 0) {
+          setVoiceError('未录到音频，请重试。');
+          setVoiceState('error');
+          return;
+        }
+
+        const actualMime = mimeType || 'audio/webm';
+        const audioBlob = new Blob(audioChunksRef.current, { type: actualMime });
+
+        // 检查大小
+        if (audioBlob.size > 16 * 1024 * 1024) {
+          setVoiceError('录音过长，请控制在2分钟以内。');
+          setVoiceState('error');
+          return;
+        }
+
+        // 上传到S3
+        setVoiceState('uploading');
+        try {
+          const arrayBuffer = await audioBlob.arrayBuffer();
+          const uint8 = new Uint8Array(arrayBuffer);
+          // 转为base64（兼容所有目标版本）
+          let binary = '';
+          const chunkSize = 8192;
+          for (let i = 0; i < uint8.length; i += chunkSize) {
+            binary += String.fromCharCode.apply(null, Array.from(uint8.subarray(i, i + chunkSize)));
+          }
+          const base64 = btoa(binary);
+
+          const uploadResult = await uploadAudioMutation.mutateAsync({
+            audioBase64: base64,
+            mimeType: actualMime.split(';')[0], // 只取主类型
+          });
+
+          // 调用Whisper转文字
+          setVoiceState('transcribing');
+          const transcribeResult = await transcribeMutation.mutateAsync({
+            audioUrl: uploadResult.url,
+          });
+
+          const text = transcribeResult.text?.trim();
+          if (text) {
+            setInput(text);
+            setVoiceState('done');
+            // 自动切换到文字模式显示识别结果
+            setInputMode('text');
+            setTimeout(() => inputRef.current?.focus(), 100);
+          } else {
+            setVoiceError('未能识别到语音内容，请重试。');
+            setVoiceState('error');
+          }
+        } catch (err: any) {
+          console.error('Voice transcription error:', err);
+          setVoiceError(err?.message || '语音识别失败，请重试或使用文字输入。');
+          setVoiceState('error');
+        }
+      };
+
+      recorder.start(100); // 每100ms收集一次数据
+      setVoiceState('recording');
+      setRecordingSeconds(0);
+
+      // 录音计时
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingSeconds(s => {
+          if (s >= 120) {
+            // 超过2分钟自动停止
+            stopRecording();
+            return s;
+          }
+          return s + 1;
+        });
+      }, 1000);
+
+    } catch (err: any) {
+      console.error('Microphone error:', err);
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setVoiceError('麦克风权限被拒绝，请在浏览器设置中允许使用麦克风。');
+      } else if (err.name === 'NotFoundError') {
+        setVoiceError('未找到麦克风设备，请检查设备连接。');
+      } else {
+        setVoiceError('无法启动录音：' + (err.message || '未知错误'));
+      }
+      setVoiceState('error');
     }
+  }, [stopRecording, uploadAudioMutation, transcribeMutation]);
 
-    const SpeechRecognitionClass = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    const recognition = new SpeechRecognitionClass();
-    recognition.lang = 'zh-CN';
-    recognition.continuous = false;
-    recognition.interimResults = false;
-
-    recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript;
-      setInput(transcript);
-      setIsListening(false);
-    };
-
-    recognition.onerror = () => setIsListening(false);
-    recognition.onend = () => setIsListening(false);
-
-    recognitionRef.current = recognition;
-    recognition.start();
-    setIsListening(true);
+  const handleVoiceButtonClick = () => {
+    if (voiceState === 'recording') {
+      stopRecording();
+    } else if (voiceState === 'idle' || voiceState === 'done' || voiceState === 'error') {
+      startRecording();
+    }
   };
+
+  const voiceStateLabel = () => {
+    switch (voiceState) {
+      case 'recording': return `正在录音 ${recordingSeconds}s，点击停止`;
+      case 'uploading': return '正在上传音频…';
+      case 'transcribing': return '正在识别语音…';
+      case 'done': return '识别完成，已填入输入框';
+      case 'error': return voiceError || '发生错误，请重试';
+      default: return '点击开始录音';
+    }
+  };
+
+  const isProcessing = voiceState === 'uploading' || voiceState === 'transcribing';
 
   const quickQuestions = [
     '《送杜少府之任蜀州》的主旨是什么？',
@@ -195,7 +333,6 @@ export default function AncientAgent({ isOpen, onClose }: AncientAgentProps) {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {/* 语音朗读开关 */}
               <button
                 onClick={() => setIsSpeaking(!isSpeaking)}
                 className={`p-1.5 rounded-sm transition-colors ${isSpeaking ? 'text-[#C0392B]' : 'text-[#8B6914]'} hover:bg-[#e8d5a3]/40`}
@@ -349,42 +486,73 @@ export default function AncientAgent({ isOpen, onClose }: AncientAgentProps) {
                   onClick={() => sendMessage(input)}
                   disabled={!input.trim() || isLoading}
                   className="px-3 py-2 rounded-sm transition-colors disabled:opacity-40"
-                  style={{
-                    background: '#C0392B',
-                    color: '#f5edd6',
-                  }}
+                  style={{ background: '#C0392B', color: '#f5edd6' }}
                 >
                   <Send className="w-4 h-4" />
                 </button>
               </div>
             ) : (
-              <div className="flex flex-col items-center gap-2">
+              <div className="flex flex-col items-center gap-2 py-1">
+                {/* 录音按钮 */}
                 <button
-                  onClick={handleVoiceInput}
-                  className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${
-                    isListening ? 'bg-[#C0392B] scale-110' : 'bg-[#8B6914]'
+                  onClick={handleVoiceButtonClick}
+                  disabled={isProcessing}
+                  className={`w-16 h-16 rounded-full flex items-center justify-center transition-all disabled:opacity-60 disabled:cursor-not-allowed ${
+                    voiceState === 'recording'
+                      ? 'bg-[#C0392B] scale-110'
+                      : voiceState === 'error'
+                      ? 'bg-[#8B4513]'
+                      : 'bg-[#8B6914]'
                   }`}
-                  style={{ boxShadow: isListening ? '0 0 20px rgba(192,57,43,0.4)' : 'none' }}
+                  style={{
+                    boxShadow: voiceState === 'recording'
+                      ? '0 0 0 8px rgba(192,57,43,0.15), 0 0 20px rgba(192,57,43,0.4)'
+                      : 'none',
+                  }}
                 >
-                  {isListening ? <MicOff className="w-6 h-6 text-white" /> : <Mic className="w-6 h-6 text-white" />}
+                  {isProcessing ? (
+                    <motion.div
+                      className="w-6 h-6 border-2 border-white border-t-transparent rounded-full"
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                    />
+                  ) : voiceState === 'recording' ? (
+                    <MicOff className="w-7 h-7 text-white" />
+                  ) : (
+                    <Mic className="w-7 h-7 text-white" />
+                  )}
                 </button>
-                <span className="text-xs text-[#8B6914]" style={{ fontFamily: 'Noto Serif SC, serif' }}>
-                  {isListening ? '正在聆听，点击停止…' : '点击开始语音输入'}
-                </span>
-                {input && (
-                  <div className="w-full">
-                    <div className="text-xs text-[#5a4030] mb-1 px-1" style={{ fontFamily: 'Noto Serif SC, serif' }}>
-                      识别结果：{input}
-                    </div>
-                    <button
-                      onClick={() => sendMessage(input)}
-                      className="w-full py-2 text-sm rounded-sm"
-                      style={{ background: '#C0392B', color: '#f5edd6', fontFamily: 'Noto Serif SC, serif' }}
-                    >
-                      发送
-                    </button>
+
+                {/* 录音波形动画 */}
+                {voiceState === 'recording' && (
+                  <div className="flex items-center gap-0.5 h-5">
+                    {[0, 1, 2, 3, 4].map(i => (
+                      <motion.div
+                        key={i}
+                        className="w-1 rounded-full bg-[#C0392B]"
+                        animate={{ height: ['4px', '16px', '4px'] }}
+                        transition={{
+                          duration: 0.6,
+                          repeat: Infinity,
+                          delay: i * 0.1,
+                          ease: 'easeInOut',
+                        }}
+                      />
+                    ))}
                   </div>
                 )}
+
+                {/* 状态文字 */}
+                <span
+                  className={`text-xs text-center leading-5 ${
+                    voiceState === 'error' ? 'text-[#C0392B]' : 'text-[#8B6914]'
+                  }`}
+                  style={{ fontFamily: 'Noto Serif SC, serif' }}
+                >
+                  {voiceStateLabel()}
+                </span>
+
+                {/* 识别结果预览（done状态已切换到text模式，此处不需要显示） */}
               </div>
             )}
           </div>

@@ -4,6 +4,8 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 import axios from "axios";
+import { transcribeAudio } from "./_core/voiceTranscription";
+import { storagePut } from "./storage";
 
 export const appRouter = router({
   system: systemRouter,
@@ -20,6 +22,53 @@ export const appRouter = router({
 
   // 古风智能体对话接口 - 使用火山引擎豆包模型
   agent: router({
+    // 上传音频文件到S3（接收base64编码的音频数据）
+    uploadAudio: publicProcedure
+      .input(z.object({
+        audioBase64: z.string(), // base64编码的音频数据
+        mimeType: z.string().default('audio/webm'),
+      }))
+      .mutation(async ({ input }) => {
+        // 将base64转换为Buffer
+        const audioBuffer = Buffer.from(input.audioBase64, 'base64');
+        
+        // 检查文件大小（16MB限制）
+        const sizeMB = audioBuffer.length / (1024 * 1024);
+        if (sizeMB > 16) {
+          throw new Error(`音频文件过大（${sizeMB.toFixed(1)}MB），请录制更短的音频`);
+        }
+
+        // 生成唯一文件名
+        const ext = input.mimeType.includes('webm') ? 'webm'
+          : input.mimeType.includes('mp4') ? 'mp4'
+          : input.mimeType.includes('ogg') ? 'ogg'
+          : 'webm';
+        const fileKey = `voice-input/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        
+        // 上传到S3
+        const { url } = await storagePut(fileKey, audioBuffer, input.mimeType);
+        return { url, key: fileKey };
+      }),
+
+    // 语音转文字
+    transcribe: publicProcedure
+      .input(z.object({
+        audioUrl: z.string().url(),
+      }))
+      .mutation(async ({ input }) => {
+        const result = await transcribeAudio({
+          audioUrl: input.audioUrl,
+          language: 'zh',
+          prompt: '唐诗 送别诗 古诗词 诗仙引路人',
+        });
+
+        if ('error' in result) {
+          throw new Error(result.error);
+        }
+
+        return { text: result.text, language: result.language };
+      }),
+
     chat: publicProcedure
       .input(z.object({
         message: z.string().min(1).max(2000),
