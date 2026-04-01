@@ -1,19 +1,27 @@
 <!doctype html>
-<html lang="en">
-
+<html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1" />
-    <title>唐代送别诗地图</title>    
-    <!-- THIS IS THE START OF A COMMENT BLOCK, BLOCK TO BE DELETED: Google Fonts here, example:
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <title>从长安出发·唐代送别诗地图</title>
+    <!-- 字体：使用 fonts.googleapis.com 镜像，中国境内可访问 -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    THIS IS THE END OF A COMMENT BLOCK, BLOCK TO BE DELETED -->
+    <!-- Ma Shan Zheng 毛笔体（标题）+ Noto Serif SC 思源宋体（正文） -->
+    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+      /* 字体降级方案，确保中国境内字体加载失败时有合适的备用字体 */
+      @font-face {
+        font-family: 'Ma Shan Zheng';
+        font-style: normal;
+        font-weight: 400;
+        src: local('STKaiti'), local('KaiTi'), local('楷体'), local('华文楷体');
+      }
+      body {
+        font-family: 'Noto Serif SC', 'SimSun', '宋体', 'STSong', serif;
+      }
+    </style>
   </head>
-
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
@@ -22,5 +30,4 @@
       src="%VITE_ANALYTICS_ENDPOINT%/umami"
       data-website-id="%VITE_ANALYTICS_WEBSITE_ID%"></script>
   </body>
-
 </html>
