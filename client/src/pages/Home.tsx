@@ -13,7 +13,7 @@ import PoemModal from '@/components/PoemModal';
 import FillGame from '@/components/FillGame';
 import AncientAgent from '@/components/AncientAgent';
 import SearchBar from '@/components/SearchBar';
-import { type Location, type Poem } from '@/data/poems';
+import { locations, type Location, type Poem } from '@/data/poems';
 
 const AGENT_AVATAR = 'https://d2xsxph8kpxj0f.cloudfront.net/310519663491654141/LTA32sutDCREcmjm8CePHN/agent-avatar-ZJjam5uQ4DnvgPJJG4VNA7.webp';
 const HERO_BG = 'https://d2xsxph8kpxj0f.cloudfront.net/310519663491654141/LTA32sutDCREcmjm8CePHN/hero-bg-HKSCQ6BNnzzMPWUnNPMrrK.webp';
@@ -45,6 +45,22 @@ export default function Home() {
     if (poemId) setDirectPoemId(poemId);
     setIsSearchOpen(false);
     setShowIntro(false);
+    
+    // 搜索诗歌后自动打开地点面板并跳转至对应诗词
+    const location = locations.find(l => l.id === locationId);
+    if (location) {
+      setSelectedLocation(location);
+      if (poemId) {
+        const poem = location.poems.find(p => p.id === poemId);
+        if (poem) {
+          // 延迟打开诗词弹窗，等待地点面板动画完成
+          setTimeout(() => {
+            setSelectedPoem(poem);
+            setDirectPoemId(null);
+          }, 400);
+        }
+      }
+    }
   }, []);
 
   const handlePoemSelect = useCallback((poem: Poem) => {

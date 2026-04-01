@@ -1,12 +1,20 @@
 /*
- * TangMap.tsx - 唐代送别诗地图主组件
- * 设计：水墨山水·宣纸质感 | 地图使用古朴风格，标注点以朱砂印记呈现
+ * TangMap.tsx - 唐代送别诗地图主组件（高德地图版）
+ * 设计：水墨山水·宣纸质感 | 高德地图古风自定义样式
  * 功能：显示现代地图，标注今地名（旁注古地名），点击显示诗词列表
+ * 注意：高德地图在中国境内可正常使用，无需科学上网
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { MapView } from '@/components/Map';
 import { locations, type Location } from '@/data/poems';
+
+declare global {
+  interface Window {
+    AMap: any;
+    _amapLoaded?: boolean;
+    _amapLoadCallbacks?: Array<() => void>;
+  }
+}
 
 interface TangMapProps {
   onLocationSelect: (location: Location) => void;
@@ -28,184 +36,431 @@ const categoryLabels: Record<string, string> = {
   other: '其他',
 };
 
+// 高德地图古风水墨自定义样式
+// 使用高德内置的"幻影黑"或自定义宣纸色调
+const AMAP_STYLE_FEATURES = [
+  {
+    featureType: 'background',
+    elementType: 'geometry',
+    stylers: { color: '#f5edd6ff' },
+  },
+  {
+    featureType: 'land',
+    elementType: 'geometry',
+    stylers: { color: '#ede0c4ff' },
+  },
+  {
+    featureType: 'green',
+    elementType: 'geometry',
+    stylers: { color: '#c8d5a8ff' },
+  },
+  {
+    featureType: 'water',
+    elementType: 'geometry',
+    stylers: { color: '#b9d3c2ff' },
+  },
+  {
+    featureType: 'highway',
+    elementType: 'geometry',
+    stylers: { color: '#f3d19cff' },
+  },
+  {
+    featureType: 'highway',
+    elementType: 'geometry.stroke',
+    stylers: { color: '#e9bc62ff' },
+  },
+  {
+    featureType: 'arterial',
+    elementType: 'geometry',
+    stylers: { color: '#fdfcf8ff' },
+  },
+  {
+    featureType: 'local',
+    elementType: 'geometry',
+    stylers: { color: '#f8f1e4ff' },
+  },
+  {
+    featureType: 'railway',
+    elementType: 'geometry',
+    stylers: { color: '#dfd2aeff' },
+  },
+  {
+    featureType: 'subway',
+    elementType: 'geometry',
+    stylers: { color: '#dfd2aeff' },
+  },
+  {
+    featureType: 'building',
+    elementType: 'geometry',
+    stylers: { color: '#e8d5b0ff' },
+  },
+  {
+    featureType: 'poi',
+    elementType: 'geometry',
+    stylers: { color: '#dfd2aeff' },
+  },
+  {
+    featureType: 'administrative',
+    elementType: 'geometry',
+    stylers: { color: '#c9b49aff' },
+  },
+  {
+    featureType: 'administrative',
+    elementType: 'labels.text.fill',
+    stylers: { color: '#3d2b1fff' },
+  },
+  {
+    featureType: 'administrative',
+    elementType: 'labels.text.stroke',
+    stylers: { color: '#f5edd6ff' },
+  },
+  {
+    featureType: 'label',
+    elementType: 'labels.text.fill',
+    stylers: { color: '#3d2b1fff' },
+  },
+  {
+    featureType: 'label',
+    elementType: 'labels.text.stroke',
+    stylers: { color: '#f5edd6ff' },
+  },
+  {
+    featureType: 'city',
+    elementType: 'labels.text.fill',
+    stylers: { color: '#5a3e2bff' },
+  },
+  {
+    featureType: 'town',
+    elementType: 'labels.text.fill',
+    stylers: { color: '#7a5a3aff' },
+  },
+  {
+    featureType: 'road',
+    elementType: 'labels.text.fill',
+    stylers: { color: '#806b63ff' },
+  },
+];
+
+// 加载高德地图脚本（使用免费的无密钥模式或申请key）
+// 注意：生产环境请在高德开放平台申请API Key
+// 申请地址：https://lbs.amap.com/
+const AMAP_KEY = import.meta.env.VITE_AMAP_KEY || ''; // 从环境变量读取
+
+function loadAMapScript(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (window.AMap && window._amapLoaded) {
+      resolve();
+      return;
+    }
+
+    if (window._amapLoadCallbacks) {
+      window._amapLoadCallbacks.push(resolve);
+      return;
+    }
+
+    window._amapLoadCallbacks = [resolve];
+
+    const script = document.createElement('script');
+    // 使用高德地图JS API 2.0，支持中国境内访问
+    script.src = `https://webapi.amap.com/maps?v=2.0&key=${AMAP_KEY}&plugin=AMap.Scale,AMap.ToolBar,AMap.MapType`;
+    script.async = true;
+    script.onload = () => {
+      window._amapLoaded = true;
+      window._amapLoadCallbacks?.forEach(cb => cb());
+      window._amapLoadCallbacks = [];
+    };
+    script.onerror = () => {
+      reject(new Error('高德地图加载失败'));
+    };
+    document.head.appendChild(script);
+  });
+}
+
 export default function TangMap({ onLocationSelect, highlightedLocationId, onMapReady }: TangMapProps) {
-  const mapRef = useRef<google.maps.Map | null>(null);
-  const markersRef = useRef<Map<string, google.maps.Marker>>(new Map());
-  const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<any>(null);
+  const markersRef = useRef<Map<string, any>>(new Map());
+  const labelsRef = useRef<Map<string, any>>(new Map());
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const onLocationSelectRef = useRef(onLocationSelect);
+  const onMapReadyRef = useRef(onMapReady);
 
-  const handleMapReady = useCallback((map: google.maps.Map) => {
-    mapRef.current = map;
-    
-    // 设置地图样式 - 古朴水墨风格
-    map.setOptions({
-      styles: [
-        { elementType: 'geometry', stylers: [{ color: '#f5edd6' }] },
-        { elementType: 'labels.text.fill', stylers: [{ color: '#3d2b1f' }] },
-        { elementType: 'labels.text.stroke', stylers: [{ color: '#f5edd6' }] },
-        { featureType: 'administrative', elementType: 'geometry.stroke', stylers: [{ color: '#c9b49a' }] },
-        { featureType: 'administrative.land_parcel', elementType: 'labels.text.fill', stylers: [{ color: '#ae9e90' }] },
-        { featureType: 'landscape.natural', elementType: 'geometry', stylers: [{ color: '#dfd2ae' }] },
-        { featureType: 'poi', elementType: 'geometry', stylers: [{ color: '#dfd2ae' }] },
-        { featureType: 'poi', elementType: 'labels.text.fill', stylers: [{ color: '#93817c' }] },
-        { featureType: 'poi.park', elementType: 'geometry.fill', stylers: [{ color: '#a5b076' }] },
-        { featureType: 'poi.park', elementType: 'labels.text.fill', stylers: [{ color: '#447530' }] },
-        { featureType: 'road', elementType: 'geometry', stylers: [{ color: '#f8f1e4' }] },
-        { featureType: 'road.arterial', elementType: 'geometry', stylers: [{ color: '#fdfcf8' }] },
-        { featureType: 'road.highway', elementType: 'geometry', stylers: [{ color: '#f3d19c' }] },
-        { featureType: 'road.highway', elementType: 'geometry.stroke', stylers: [{ color: '#e9bc62' }] },
-        { featureType: 'road.local', elementType: 'labels.text.fill', stylers: [{ color: '#806b63' }] },
-        { featureType: 'transit.line', elementType: 'geometry', stylers: [{ color: '#dfd2ae' }] },
-        { featureType: 'transit.line', elementType: 'labels.text.fill', stylers: [{ color: '#8f7d77' }] },
-        { featureType: 'transit.line', elementType: 'labels.text.stroke', stylers: [{ color: '#ebe3cd' }] },
-        { featureType: 'transit.station', elementType: 'geometry', stylers: [{ color: '#dfd2ae' }] },
-        { featureType: 'water', elementType: 'geometry.fill', stylers: [{ color: '#b9d3c2' }] },
-        { featureType: 'water', elementType: 'labels.text.fill', stylers: [{ color: '#92998d' }] },
-      ],
-      mapTypeControl: false,
-      streetViewControl: false,
-      fullscreenControl: false,
-      zoomControlOptions: {
-        position: google.maps.ControlPosition.RIGHT_CENTER,
-      },
-    });
+  useEffect(() => {
+    onLocationSelectRef.current = onLocationSelect;
+  }, [onLocationSelect]);
 
-    // 创建信息窗口
-    infoWindowRef.current = new google.maps.InfoWindow();
+  useEffect(() => {
+    onMapReadyRef.current = onMapReady;
+  }, [onMapReady]);
 
-    // 添加标注点
-    locations.forEach(loc => {
-      const color = categoryColors[loc.category] || '#C0392B';
-      
-      // 创建自定义SVG标注
-      const svgMarker = {
-        path: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z',
-        fillColor: color,
-        fillOpacity: 1,
-        strokeColor: '#fff',
-        strokeWeight: 1.5,
-        scale: 1.6,
-        anchor: new google.maps.Point(12, 22),
-      };
+  const initMap = useCallback(async () => {
+    if (!mapContainerRef.current || mapRef.current) return;
 
-      const marker = new google.maps.Marker({
-        position: { lat: loc.lat, lng: loc.lng },
-        map: map,
-        icon: svgMarker,
-        title: loc.modernName,
-        animation: google.maps.Animation.DROP,
+    try {
+      await loadAMapScript();
+
+      const AMap = window.AMap;
+      if (!AMap) throw new Error('AMap未加载');
+
+      // 创建地图实例
+      const map = new AMap.Map(mapContainerRef.current, {
+        zoom: 5,
+        center: [105, 35.5],
+        mapStyle: 'amap://styles/whitesmoke', // 使用高德内置浅色样式作为基础
+        features: ['bg', 'road', 'building', 'point'],
+        viewMode: '2D',
+        lang: 'zh_cn',
+        showLabel: true,
+        showBuildingBlock: false,
+        // 禁用不必要的控件
+        rotateEnable: false,
+        pitchEnable: false,
       });
 
-      // 创建标注标签
-      const labelDiv = document.createElement('div');
-      labelDiv.style.cssText = `
-        position: absolute;
-        transform: translateX(-50%);
-        white-space: nowrap;
-        pointer-events: none;
-        text-align: center;
-        margin-top: 2px;
-      `;
-      labelDiv.innerHTML = `
-        <div style="
-          font-family: 'Noto Serif SC', serif;
-          font-size: 13px;
-          font-weight: 600;
-          color: #1a1a1a;
-          text-shadow: 0 1px 3px rgba(245,237,214,0.9), 0 0 6px rgba(245,237,214,0.8);
-          line-height: 1.3;
-        ">${loc.modernName}</div>
-        <div style="
-          font-family: 'Noto Serif SC', serif;
-          font-size: 10px;
-          color: #8B6914;
-          text-shadow: 0 1px 2px rgba(245,237,214,0.9);
-        ">古为${loc.ancientName}</div>
-      `;
+      // 应用自定义古风样式 - 使用高德内置浅色样式
+      // 高德内置样式列表: whitesmoke, fresh, grey, dark, wine, macaron, blue, darkblue, graffiti, chalk, fresh
+      // whitesmoke 最接近宣纸色调，适合古风主题
+      map.setMapStyle('amap://styles/whitesmoke');
 
-      // 添加标注覆盖物
-      class LabelOverlay extends google.maps.OverlayView {
-        private div: HTMLDivElement | null = null;
-        constructor(private position: google.maps.LatLng, private content: HTMLDivElement) {
-          super();
-        }
-        onAdd() {
-          this.div = this.content;
-          const panes = this.getPanes();
-          panes?.overlayLayer.appendChild(this.div);
-        }
-        draw() {
-          const overlayProjection = this.getProjection();
-          const pos = overlayProjection.fromLatLngToDivPixel(this.position);
-          if (pos && this.div) {
-            this.div.style.left = pos.x + 'px';
-            this.div.style.top = (pos.y + 5) + 'px';
+      // 添加比例尺
+      const scale = new AMap.Scale({
+        visible: true,
+        position: { bottom: '30px', right: '10px' },
+      });
+      map.addControl(scale);
+
+      mapRef.current = map;
+
+      // 添加标注点
+      locations.forEach(loc => {
+        const color = categoryColors[loc.category] || '#C0392B';
+
+        // 创建自定义标注内容
+        const markerContent = document.createElement('div');
+        markerContent.style.cssText = `
+          position: relative;
+          cursor: pointer;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          transform: translateX(-50%) translateY(-100%);
+        `;
+        markerContent.innerHTML = `
+          <div style="
+            width: 36px;
+            height: 36px;
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
+            background: ${color};
+            border: 2.5px solid rgba(255,255,255,0.9);
+            box-shadow: 0 3px 12px rgba(0,0,0,0.3), 0 1px 4px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s, box-shadow 0.2s;
+          ">
+            <div style="
+              width: 10px;
+              height: 10px;
+              border-radius: 50%;
+              background: rgba(255,255,255,0.9);
+              transform: rotate(45deg);
+            "></div>
+          </div>
+          <div style="
+            margin-top: 6px;
+            text-align: center;
+            pointer-events: none;
+          ">
+            <div style="
+              font-family: 'Ma Shan Zheng', serif;
+              font-size: 13px;
+              font-weight: 600;
+              color: #1a1a1a;
+              text-shadow: 0 1px 3px rgba(245,237,214,0.95), 0 0 8px rgba(245,237,214,0.9);
+              line-height: 1.3;
+              white-space: nowrap;
+            ">${loc.modernName}</div>
+            <div style="
+              font-family: 'Noto Serif SC', serif;
+              font-size: 10px;
+              color: #8B6914;
+              text-shadow: 0 1px 2px rgba(245,237,214,0.9);
+              white-space: nowrap;
+              margin-top: 1px;
+            ">古为${loc.ancientName}</div>
+          </div>
+        `;
+
+        // 悬停效果
+        const pinEl = markerContent.querySelector('div') as HTMLDivElement;
+        markerContent.addEventListener('mouseenter', () => {
+          if (pinEl) {
+            pinEl.style.transform = 'rotate(-45deg) scale(1.15)';
+            pinEl.style.boxShadow = `0 6px 20px rgba(0,0,0,0.4), 0 2px 8px ${color}80`;
           }
-        }
-        onRemove() {
-          if (this.div) {
-            this.div.parentNode?.removeChild(this.div);
-            this.div = null;
+        });
+        markerContent.addEventListener('mouseleave', () => {
+          if (pinEl) {
+            pinEl.style.transform = 'rotate(-45deg) scale(1)';
+            pinEl.style.boxShadow = '0 3px 12px rgba(0,0,0,0.3), 0 1px 4px rgba(0,0,0,0.2)';
           }
-        }
+        });
+
+        const marker = new AMap.Marker({
+          position: new AMap.LngLat(loc.lng, loc.lat),
+          content: markerContent,
+          offset: new AMap.Pixel(0, 0),
+          zIndex: 100,
+          title: loc.modernName,
+        });
+
+        marker.on('click', () => {
+          onLocationSelectRef.current(loc);
+          map.setCenter([loc.lng, loc.lat]);
+          map.setZoom(7);
+        });
+
+        marker.setMap(map);
+        markersRef.current.set(loc.id, marker);
+      });
+
+      setMapLoaded(true);
+      onMapReadyRef.current?.();
+    } catch (err) {
+      console.error('地图初始化失败:', err);
+      setLoadError('地图加载失败，请检查网络连接');
+    }
+  }, []);
+
+  useEffect(() => {
+    initMap();
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.destroy();
+        mapRef.current = null;
       }
-
-      const overlay = new LabelOverlay(
-        new google.maps.LatLng(loc.lat, loc.lng),
-        labelDiv
-      );
-      overlay.setMap(map);
-
-      marker.addListener('click', () => {
-        onLocationSelect(loc);
-        map.panTo({ lat: loc.lat, lng: loc.lng });
-      });
-
-      marker.addListener('mouseover', () => {
-        marker.setAnimation(google.maps.Animation.BOUNCE);
-        setTimeout(() => marker.setAnimation(null), 750);
-      });
-
-      markersRef.current.set(loc.id, marker);
-    });
-
-    setMapLoaded(true);
-    onMapReady?.();
-  }, [onLocationSelect, onMapReady]);
+    };
+  }, [initMap]);
 
   // 高亮指定地点
   useEffect(() => {
-    if (!mapLoaded || !highlightedLocationId) return;
-    
-    const marker = markersRef.current.get(highlightedLocationId);
+    if (!mapLoaded || !highlightedLocationId || !mapRef.current) return;
+
     const location = locations.find(l => l.id === highlightedLocationId);
-    
-    if (marker && location && mapRef.current) {
-      mapRef.current.panTo({ lat: location.lat, lng: location.lng });
-      mapRef.current.setZoom(7);
-      marker.setAnimation(google.maps.Animation.BOUNCE);
-      setTimeout(() => marker.setAnimation(null), 2000);
+    if (!location) return;
+
+    const map = mapRef.current;
+    map.setCenter([location.lng, location.lat]);
+    map.setZoom(7);
+
+    // 标注闪烁动画
+    const marker = markersRef.current.get(highlightedLocationId);
+    if (marker) {
+      const content = marker.getContent() as HTMLDivElement;
+      const pinEl = content?.querySelector('div') as HTMLDivElement;
+      if (pinEl) {
+        let count = 0;
+        const interval = setInterval(() => {
+          count++;
+          pinEl.style.transform = count % 2 === 0
+            ? 'rotate(-45deg) scale(1)'
+            : 'rotate(-45deg) scale(1.25)';
+          if (count >= 6) {
+            clearInterval(interval);
+            pinEl.style.transform = 'rotate(-45deg) scale(1)';
+          }
+        }, 300);
+      }
     }
   }, [highlightedLocationId, mapLoaded]);
 
   return (
     <div className="relative w-full h-full">
-      <MapView
-        onMapReady={handleMapReady}
-        initialCenter={{ lat: 35.5, lng: 105 }}
-        initialZoom={5}
-        className="w-full h-full"
-      />
-      
-      {/* 地图图例 */}
-      <div className="absolute bottom-8 left-4 bg-[#f5edd6]/90 backdrop-blur-sm border border-[#c9b49a] rounded-sm p-3 shadow-md">
-        <div className="text-xs font-semibold text-[#3d2b1f] mb-2" style={{ fontFamily: 'Ma Shan Zheng, serif' }}>
+      {/* 地图容器 */}
+      <div ref={mapContainerRef} className="w-full h-full" />
+
+      {/* 加载状态 */}
+      {!mapLoaded && !loadError && (
+        <div className="absolute inset-0 flex items-center justify-center"
+          style={{ background: '#f5edd6' }}>
+          <div className="text-center">
+            <div
+              className="text-2xl mb-3 animate-pulse"
+              style={{ fontFamily: 'Ma Shan Zheng, serif', color: '#8B6914' }}
+            >
+              地图加载中…
+            </div>
+            <div className="flex gap-1.5 justify-center">
+              {[0, 1, 2].map(i => (
+                <div
+                  key={i}
+                  className="w-2 h-2 rounded-full animate-bounce"
+                  style={{
+                    background: '#C0392B',
+                    animationDelay: `${i * 0.15}s`,
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 加载错误 */}
+      {loadError && (
+        <div className="absolute inset-0 flex items-center justify-center"
+          style={{ background: '#f5edd6' }}>
+          <div className="text-center px-8">
+            <div
+              className="text-xl mb-2"
+              style={{ fontFamily: 'Ma Shan Zheng, serif', color: '#C0392B' }}
+            >
+              地图暂时无法加载
+            </div>
+            <div
+              className="text-sm text-[#5a4030]"
+              style={{ fontFamily: 'Noto Serif SC, serif' }}
+            >
+              {loadError}
+            </div>
+            <button
+              onClick={() => { setLoadError(null); initMap(); }}
+              className="mt-4 px-4 py-2 text-sm rounded-sm border border-[#c9b49a] text-[#5a4030] hover:bg-[#e8d5a3] transition-colors"
+              style={{ fontFamily: 'Noto Serif SC, serif' }}
+            >
+              重新加载
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 图例 - 右上角 */}
+      <div
+        className="absolute top-4 right-4 z-10 rounded-sm p-3 shadow-md"
+        style={{
+          background: 'rgba(245,237,214,0.92)',
+          border: '1px solid #c9b49a',
+          backdropFilter: 'blur(4px)',
+        }}
+      >
+        <div
+          className="text-xs font-semibold text-[#3d2b1f] mb-2 pb-1.5 border-b border-[#c9b49a]/60"
+          style={{ fontFamily: 'Ma Shan Zheng, serif', fontSize: '0.85rem' }}
+        >
           图例
         </div>
         {Object.entries(categoryColors).map(([cat, color]) => (
-          <div key={cat} className="flex items-center gap-2 mb-1">
-            <div className="w-3 h-3 rounded-full border border-white shadow-sm" style={{ backgroundColor: color }} />
-            <span className="text-xs text-[#3d2b1f]" style={{ fontFamily: 'Noto Serif SC, serif' }}>
+          <div key={cat} className="flex items-center gap-2 mb-1 last:mb-0">
+            <div
+              className="w-3 h-3 rounded-full border border-white/80 shadow-sm shrink-0"
+              style={{ backgroundColor: color }}
+            />
+            <span
+              className="text-xs text-[#3d2b1f]"
+              style={{ fontFamily: 'Noto Serif SC, serif' }}
+            >
               {categoryLabels[cat]}
             </span>
           </div>
