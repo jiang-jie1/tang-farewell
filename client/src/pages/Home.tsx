@@ -6,7 +6,6 @@
 
 import { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, X } from 'lucide-react';
 import TangMap from '@/components/TangMap';
 import LocationPanel from '@/components/LocationPanel';
 import PoemModal from '@/components/PoemModal';
@@ -25,7 +24,6 @@ export default function Home() {
   const [isAgentOpen, setIsAgentOpen] = useState(false);
   const [highlightedLocationId, setHighlightedLocationId] = useState<string | null>(null);
   const [directPoemId, setDirectPoemId] = useState<string | null>(null);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [showIntro, setShowIntro] = useState(true);
 
   const handleLocationSelect = useCallback((location: Location) => {
@@ -43,7 +41,6 @@ export default function Home() {
   const handleLocationHighlight = useCallback((locationId: string, poemId?: string) => {
     setHighlightedLocationId(locationId);
     if (poemId) setDirectPoemId(poemId);
-    setIsSearchOpen(false);
     setShowIntro(false);
     
     // 搜索诗歌后自动打开地点面板并跳转至对应诗词
@@ -150,54 +147,12 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      {/* 顶部工具栏 */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center gap-3">
-        <AnimatePresence mode="wait">
-          {isSearchOpen ? (
-            <motion.div
-              key="searchbar"
-              initial={{ width: 40, opacity: 0 }}
-              animate={{ width: 340, opacity: 1 }}
-              exit={{ width: 40, opacity: 0 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="overflow-hidden"
-            >
-              <div className="flex items-center gap-2 w-[340px]">
-                <div className="flex-1">
-                  <SearchBar
-                    onLocationHighlight={handleLocationHighlight}
-                    onClear={() => setHighlightedLocationId(null)}
-                  />
-                </div>
-                <button
-                  onClick={() => setIsSearchOpen(false)}
-                  className="p-2 bg-[#f5edd6]/95 border border-[#c9b49a] rounded-sm text-[#8B6914] hover:text-[#C0392B] shadow-md transition-colors shrink-0"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            </motion.div>
-          ) : (
-            <motion.button
-              key="searchbtn"
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => setIsSearchOpen(true)}
-              className="flex items-center gap-2 px-5 py-2.5 border rounded-sm shadow-md hover:shadow-lg transition-all"
-              style={{
-                background: 'rgba(245,237,214,0.95)',
-                border: '1px solid #c9b49a',
-                fontFamily: 'Noto Serif SC, serif',
-              }}
-            >
-              <Search className="w-4 h-4 text-[#8B6914]" />
-              <span className="text-sm text-[#5a4030]">搜索地名或诗词</span>
-            </motion.button>
-          )}
-        </AnimatePresence>
+      {/* 顶部搜索栏 - 始终显示 */}
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-[420px]">
+        <SearchBar
+          onLocationHighlight={handleLocationHighlight}
+          onClear={() => setHighlightedLocationId(null)}
+        />
       </div>
 
       {/* 右侧地点信息面板 */}
