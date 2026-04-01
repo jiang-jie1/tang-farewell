@@ -80,14 +80,14 @@ const AMAP_STYLE_FEATURES = [
     stylers: { color: '#f8f1e4ff' },
   },
   {
-    featureType: 'railway',
+          featureType: 'railway',
     elementType: 'geometry',
-    stylers: { color: '#dfd2aeff' },
+    stylers: { visibility: 'off' },
   },
   {
     featureType: 'subway',
     elementType: 'geometry',
-    stylers: { color: '#dfd2aeff' },
+    stylers: { visibility: 'off' },
   },
   {
     featureType: 'building',
@@ -209,15 +209,30 @@ export default function TangMap({ onLocationSelect, highlightedLocationId, onMap
         center: [105, 35.5],
         // whitesmoke + CSS sepia滤镜 = 最佳古风效果
         mapStyle: 'amap://styles/whitesmoke',
-        features: ['bg', 'road', 'building', 'point'],
+        // 只显示背景和道路，不显示建筑和POI点（避免现代图标干扰古风效果）
+        features: ['bg', 'road'],
+        // 限制地图范围到中亚+东亚（经纬度边界）
+        limitBounds: new AMap.Bounds([50, 10], [145, 60]),
         viewMode: '2D',
         lang: 'zh_cn',
         showLabel: true,
         showBuildingBlock: false,
         rotateEnable: false,
         pitchEnable: false,
-        // 限制缩放范围：最小3（亚洲范围），最大11（城市级，不显示建筑细节）
-        zooms: [3, 11],
+        // 限制缩放范围：最小4（中亚+东亚范围），最大9（城市级，不显示铁路/建筑细节）
+        zooms: [4, 9],
+      });
+
+      // 隐藏铁路、地铁等现代交通图层
+      map.on('complete', () => {
+        // 移除铁路、地铁等图层（高德地图2.0 API）
+        const layers = map.getLayers();
+        layers.forEach((layer: any) => {
+          const name = layer.getClassName?.() || '';
+          if (name.includes('Railway') || name.includes('Subway') || name.includes('Transit')) {
+            map.remove(layer);
+          }
+        });
       });
 
       // 添加比例尺
