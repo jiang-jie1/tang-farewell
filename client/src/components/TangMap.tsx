@@ -207,8 +207,8 @@ export default function TangMap({ onLocationSelect, highlightedLocationId, onMap
       const map = new AMap.Map(mapContainerRef.current, {
         zoom: 5,
         center: [105, 35.5],
-        // macaron: 温暖米黄色调，最接近古地图风格
-        mapStyle: 'amap://styles/macaron',
+        // whitesmoke + CSS sepia滤镜 = 最佳古风效果
+        mapStyle: 'amap://styles/whitesmoke',
         features: ['bg', 'road', 'building', 'point'],
         viewMode: '2D',
         lang: 'zh_cn',
@@ -392,8 +392,15 @@ export default function TangMap({ onLocationSelect, highlightedLocationId, onMap
 
   return (
     <div className="relative w-full h-full">
-      {/* 地图容器 */}
-      <div ref={mapContainerRef} className="w-full h-full" />
+      {/* 地图容器 - 古风CSS滤镜：sepia棕褐色调 */}
+      <div
+        ref={mapContainerRef}
+        className="w-full h-full"
+        style={{
+          filter: mapLoaded ? 'sepia(50%) saturate(65%) brightness(1.04) contrast(0.92) hue-rotate(-5deg)' : 'none',
+          transition: 'filter 0.8s ease',
+        }}
+      />
 
       {/* 加载状态 */}
       {!mapLoaded && !loadError && (

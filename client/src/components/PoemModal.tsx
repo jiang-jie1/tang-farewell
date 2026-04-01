@@ -1,11 +1,10 @@
 /*
  * PoemModal.tsx - 诗词详情弹窗
  * 设计：卷轴展开动画，宣纸质感，包含诗词原文/赏析/课外知识/填词游戏入口
- * 功能：展示诗词全文，赏析，课外小知识；右下角有"挑战填词"按钮
- *       诗词原文支持点击词语弹出课本式注释
+ * 注释设计：注释全部放在诗词底部，点击词语时对应注释高亮展开，其余折叠
  */
 
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, BookOpen, Lightbulb, Feather, ChevronDown, ChevronUp } from 'lucide-react';
 import { type Poem, type Location, type Annotation } from '@/data/poems';
@@ -17,128 +16,45 @@ interface PoemModalProps {
   onStartGame: (poem: Poem) => void;
 }
 
-// 注释气泡组件
-function AnnotationBubble({
-  word,
-  annotation,
-  onClose,
-}: {
-  word: string;
-  annotation: string;
-  onClose: () => void;
-}) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 6, scale: 0.95 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: 4, scale: 0.95 }}
-      transition={{ duration: 0.18 }}
-      className="fixed z-[200] max-w-[260px] rounded-sm shadow-xl"
-      style={{
-        background: 'linear-gradient(160deg, #fdf6e3 0%, #f5edd6 100%)',
-        border: '1px solid #c9b49a',
-        boxShadow: '0 8px 24px rgba(30,20,10,0.25)',
-      }}
-      onClick={(e) => e.stopPropagation()}
-    >
-      {/* 顶部装饰条 */}
-      <div className="h-1 w-full rounded-t-sm" style={{ background: 'linear-gradient(90deg, #C0392B, #8B6914, #C0392B)' }} />
-      <div className="p-3">
-        <div className="flex items-center justify-between mb-1.5">
-          <span
-            className="text-base font-bold text-[#C0392B]"
-            style={{ fontFamily: 'Ma Shan Zheng, serif', letterSpacing: '0.1em' }}
-          >
-            {word}
-          </span>
-          <button
-            onClick={onClose}
-            className="text-[#8B6914] hover:text-[#C0392B] transition-colors ml-2"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-        <div
-          className="text-xs text-[#3d2b1f] leading-5"
-          style={{ fontFamily: 'Noto Serif SC, serif' }}
-        >
-          {annotation}
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-// 可注释的诗句行
-function AnnotatedLine({
-  line,
+// 诗词原文 + 底部注释区
+function PoemWithAnnotations({
+  poem,
   annotations,
-  lineIndex,
 }: {
-  line: string;
+  poem: Poem;
   annotations: Record<string, string>;
-  lineIndex: number;
 }) {
-  const [activeAnnotation, setActiveAnnotation] = useState<{
-    word: string;
-    text: string;
-    x: number;
-    y: number;
-  } | null>(null);
+  const [activeWord, setActiveWord] = useState<string | null>(null);
 
-  const containerRef = useRef<HTMLDivElement>(null);
+  const hasAnnotations = Object.keys(annotations).length > 0;
 
-  // 点击外部关闭注释
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setActiveAnnotation(null);
-      }
-    };
-    if (activeAnnotation) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [activeAnnotation]);
-
-  // 将诗句拆分为可注释的词语片段
-  const renderLine = () => {
+  // 将诗句拆分为可点击词语和普通字符
+  const renderLine = (line: string, lineIndex: number) => {
     const chars = line.split('');
     const result: React.ReactNode[] = [];
     let i = 0;
 
     while (i < chars.length) {
-      // 尝试匹配最长的注释词语（最多4字）
       let matched = false;
+      // 尝试匹配最长注释词（最多4字）
       for (let len = Math.min(4, chars.length - i); len >= 1; len--) {
         const word = chars.slice(i, i + len).join('');
         if (annotations[word]) {
-          const wordIndex = i;
+          const isActive = activeWord === word;
           result.push(
             <span
-              key={`${lineIndex}-${wordIndex}`}
-              className="relative inline-block cursor-pointer"
+              key={`${lineIndex}-${i}`}
+              className="relative inline-block cursor-pointer select-none"
               style={{
-                color: '#8B2500',
-                borderBottom: '1px dotted #C0392B',
-                textDecoration: 'none',
+                color: isActive ? '#C0392B' : '#8B2500',
+                borderBottom: isActive ? '2px solid #C0392B' : '1px dotted #C0392B',
+                fontWeight: isActive ? '600' : 'normal',
+                transition: 'all 0.15s',
+                padding: '0 1px',
               }}
               onClick={(e) => {
                 e.stopPropagation();
-                const rect = (e.target as HTMLElement).getBoundingClientRect();
-                const bubbleWidth = 260;
-                const viewportWidth = window.innerWidth;
-                let x = rect.left;
-                // 防止气泡超出右边界
-                if (x + bubbleWidth > viewportWidth - 16) {
-                  x = viewportWidth - bubbleWidth - 16;
-                }
-                const y = rect.bottom + 6;
-                setActiveAnnotation(
-                  activeAnnotation?.word === word && activeAnnotation?.x === x
-                    ? null
-                    : { word, text: annotations[word], x, y }
-                );
+                setActiveWord(activeWord === word ? null : word);
               }}
             >
               {word}
@@ -162,36 +78,124 @@ function AnnotatedLine({
   };
 
   return (
-    <div ref={containerRef} className="relative">
-      <motion.div
-        initial={{ opacity: 0, y: 5 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: lineIndex * 0.1 }}
-        className="text-xl text-[#1a1a1a] leading-loose tracking-widest"
-        style={{ fontFamily: 'Noto Serif SC, serif', textShadow: '0 1px 2px rgba(245,237,214,0.5)' }}
+    <div>
+      {/* 诗词正文 */}
+      <div
+        className="text-center mb-4"
+        style={{
+          backgroundImage: `url(https://d2xsxph8kpxj0f.cloudfront.net/310519663491654141/LTA32sutDCREcmjm8CePHN/poem-card-bg-F7AqPQzbt28Hf7dxMEcsM5.webp)`,
+          backgroundSize: 'cover',
+          padding: '2rem',
+          borderRadius: '2px',
+          border: '1px solid #c9b49a',
+        }}
       >
-        {renderLine()}
-      </motion.div>
-
-      {/* 注释气泡 - 用 portal 渲染到 body */}
-      <AnimatePresence>
-        {activeAnnotation && (
-          <div
-            style={{
-              position: 'fixed',
-              left: activeAnnotation.x,
-              top: activeAnnotation.y,
-              zIndex: 9999,
-            }}
+        {poem.lines.map((line, i) => (
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: i * 0.08 }}
+            className="text-xl text-[#1a1a1a] leading-loose tracking-widest"
+            style={{ fontFamily: 'Noto Serif SC, serif', textShadow: '0 1px 2px rgba(245,237,214,0.5)' }}
           >
-            <AnnotationBubble
-              word={activeAnnotation.word}
-              annotation={activeAnnotation.text}
-              onClose={() => setActiveAnnotation(null)}
-            />
+            {renderLine(line, i)}
+          </motion.div>
+        ))}
+        <div className="mt-4 text-sm text-[#8B6914]" style={{ fontFamily: 'Noto Serif SC, serif' }}>
+          —— {poem.dynasty} · {poem.author}
+        </div>
+      </div>
+
+      {/* 底部注释区 */}
+      {hasAnnotations && (
+        <div
+          className="rounded-sm overflow-hidden"
+          style={{ border: '1px solid #c9b49a', background: 'rgba(245,237,214,0.4)' }}
+        >
+          {/* 注释区标题 */}
+          <div
+            className="flex items-center gap-2 px-4 py-2 border-b border-[#c9b49a]/50"
+            style={{ background: 'rgba(192,57,43,0.06)' }}
+          >
+            <span
+              className="text-xs font-semibold text-[#C0392B]"
+              style={{ fontFamily: 'Ma Shan Zheng, serif', letterSpacing: '0.15em', fontSize: '0.85rem' }}
+            >
+              注 释
+            </span>
+            <span className="text-xs text-[#8B6914]/60" style={{ fontFamily: 'Noto Serif SC, serif' }}>
+              · 点击词语查看详解
+            </span>
           </div>
-        )}
-      </AnimatePresence>
+
+          {/* 注释列表 */}
+          <div className="divide-y divide-[#c9b49a]/30">
+            {(poem.annotations ?? []).map((ann: Annotation, idx: number) => {
+              const isExpanded = activeWord === ann.word;
+              return (
+                <div key={idx}>
+                  {/* 注释条目头部（可点击展开/折叠） */}
+                  <button
+                    className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-[#f5edd6]/60 transition-colors"
+                    onClick={() => setActiveWord(isExpanded ? null : ann.word)}
+                  >
+                    <div className="flex items-center gap-3">
+                      {/* 序号 */}
+                      <span
+                        className="w-5 h-5 rounded-full flex items-center justify-center text-xs text-white shrink-0"
+                        style={{ background: isExpanded ? '#C0392B' : '#8B6914', fontFamily: 'Noto Serif SC, serif', transition: 'background 0.2s' }}
+                      >
+                        {idx + 1}
+                      </span>
+                      {/* 词语 */}
+                      <span
+                        className="text-sm font-semibold"
+                        style={{
+                          fontFamily: 'Ma Shan Zheng, serif',
+                          color: isExpanded ? '#C0392B' : '#3d2b1f',
+                          letterSpacing: '0.1em',
+                          fontSize: '0.95rem',
+                          transition: 'color 0.2s',
+                        }}
+                      >
+                        {ann.word}
+                      </span>
+                    </div>
+                    {isExpanded
+                      ? <ChevronUp className="w-3.5 h-3.5 text-[#C0392B] shrink-0" />
+                      : <ChevronDown className="w-3.5 h-3.5 text-[#8B6914]/60 shrink-0" />
+                    }
+                  </button>
+
+                  {/* 注释内容（展开时显示） */}
+                  <AnimatePresence>
+                    {isExpanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.22 }}
+                        className="overflow-hidden"
+                      >
+                        <div
+                          className="px-4 pb-3 pt-1 text-sm text-[#3d2b1f] leading-7 border-t border-[#C0392B]/20"
+                          style={{
+                            fontFamily: 'Noto Serif SC, serif',
+                            background: 'rgba(192,57,43,0.04)',
+                          }}
+                        >
+                          {ann.note}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -259,13 +263,6 @@ export default function PoemModal({ poem, location, onClose, onStartGame }: Poem
             <p className="text-sm text-[#5a4030]" style={{ fontFamily: 'Noto Serif SC, serif' }}>
               {poem.author}
             </p>
-
-            {/* 注释提示 */}
-            {Object.keys(annotations).length > 0 && activeTab === 'poem' && (
-              <p className="text-xs text-[#8B6914]/70 mt-1.5" style={{ fontFamily: 'Noto Serif SC, serif' }}>
-                💡 点击<span style={{ color: '#8B2500', borderBottom: '1px dotted #C0392B' }}>标注词语</span>可查看注释
-              </p>
-            )}
           </div>
 
           {/* 标签页 */}
@@ -304,32 +301,10 @@ export default function PoemModal({ poem, location, onClose, onStartGame }: Poem
                   transition={{ duration: 0.2 }}
                   className="p-6"
                 >
-                  {/* 诗词正文 */}
-                  <div
-                    className="text-center mb-8"
-                    style={{
-                      backgroundImage: `url(https://d2xsxph8kpxj0f.cloudfront.net/310519663491654141/LTA32sutDCREcmjm8CePHN/poem-card-bg-F7AqPQzbt28Hf7dxMEcsM5.webp)`,
-                      backgroundSize: 'cover',
-                      padding: '2rem',
-                      borderRadius: '2px',
-                      border: '1px solid #c9b49a',
-                    }}
-                  >
-                    {poem.lines.map((line, i) => (
-                      <AnnotatedLine
-                        key={i}
-                        line={line}
-                        annotations={annotations}
-                        lineIndex={i}
-                      />
-                    ))}
-                    <div className="mt-4 text-sm text-[#8B6914]" style={{ fontFamily: 'Noto Serif SC, serif' }}>
-                      —— {poem.dynasty} · {poem.author}
-                    </div>
-                  </div>
+                  <PoemWithAnnotations poem={poem} annotations={annotations} />
 
                   {/* 填词游戏按钮 */}
-                  <div className="flex justify-end">
+                  <div className="flex justify-end mt-5">
                     <button
                       onClick={() => onStartGame(poem)}
                       className="btn-seal flex items-center gap-2"
