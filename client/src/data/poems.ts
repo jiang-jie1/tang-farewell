@@ -1,6 +1,13 @@
 // 唐代送别诗地理数据
 // 设计风格：水墨山水·宣纸质感 | 新中式极简主义×宋代文人美学
 
+export interface Annotation {
+  word: string;        // 被注释的词语（1-4字）
+  lineIndex: number;   // 所在行（0-based）
+  startIndex: number;  // 在该行中的起始位置（0-based）
+  note: string;        // 注释内容
+}
+
 export interface Poem {
   id: string;
   title: string;
@@ -8,6 +15,7 @@ export interface Poem {
   dynasty: string;
   lines: string[];          // 诗句数组
   blanks: BlankItem[];      // 填词游戏空白
+  annotations: Annotation[]; // 词语注释（课本式）
   appreciation: string;     // 赏析
   trivia: string[];         // 课外小知识
   reciteHint: string[];     // 背诵提示（每句首字）
@@ -62,6 +70,19 @@ export const locations: Location[] = [
           { lineIndex: 3, wordIndex: 2, answer: '在', hint: '处于' },
           { lineIndex: 3, wordIndex: 5, answer: '共', hint: '一起，共同' },
         ],
+        annotations: [
+          { word: '城阙', lineIndex: 0, startIndex: 0, note: '城阙：城墙和宫阙，此处指长安城。阙，宫门两侧的楼台。' },
+          { word: '三秦', lineIndex: 0, startIndex: 3, note: '三秦：项羽灭秦后，将关中分封给三位秦将，故称"三秦"，泛指关中地区（今陕西省中部）。' },
+          { word: '五津', lineIndex: 0, startIndex: 8, note: '五津：蜀地岷江上的五个渡口，即白华津、万里津、江首津、涉头津、江南津，泛指蜀地（今四川）。' },
+          { word: '风烟', lineIndex: 0, startIndex: 6, note: '风烟：风雾迷茫的样子，形容蜀地路途遥远，隐约难见。' },
+          { word: '宦游', lineIndex: 1, startIndex: 8, note: '宦游：在外做官，离乡为官。宦，做官。' },
+          { word: '海内', lineIndex: 2, startIndex: 0, note: '海内：古代认为中国四面环海，故称国境之内为"海内"，即天下、全国。' },
+          { word: '天涯', lineIndex: 2, startIndex: 6, note: '天涯：天边，形容极远的地方。涯，边际。' },
+          { word: '比邻', lineIndex: 2, startIndex: 8, note: '比邻：近邻，紧挨着的邻居。比，靠近、紧挨。' },
+          { word: '无为', lineIndex: 3, startIndex: 0, note: '无为：不要，不必。此处是劝慰之词，意为"不要做……"。' },
+          { word: '歧路', lineIndex: 3, startIndex: 3, note: '歧路：岔路口，分叉的路。此处指送别的路口，是离别之地的象征。' },
+          { word: '沾巾', lineIndex: 3, startIndex: 7, note: '沾巾：泪水沾湿手巾，形容哭泣。巾，手巾、佩巾。' },
+        ],
         appreciation: `此诗是王勃在长安为友人杜少府赴任蜀州（今四川崇州）所作的送别诗，被誉为"唐人送别诗中的压卷之作"。
 
 首联"城阙辅三秦，风烟望五津"，以宏阔的地理视野开篇——长安城阙有三秦大地拱卫，而遥望蜀地，五津渡口隐在风烟之中。一"辅"一"望"，将两地的空间距离拉开，却又以"望"字暗示了诗人对友人此去的深情凝视。
@@ -98,6 +119,16 @@ export const locations: Location[] = [
           { lineIndex: 2, wordIndex: 2, answer: '更', hint: '再，又' },
           { lineIndex: 3, wordIndex: 4, answer: '无', hint: '没有' },
         ],
+        annotations: [
+          { word: '渭城', lineIndex: 0, startIndex: 0, note: '渭城：秦代咸阳故城，位于今陕西省咸阳市渭城区，在唐代长安西北约20公里处，是出发前往西域的必经之地。' },
+          { word: '浥', lineIndex: 0, startIndex: 4, note: '浥（yì）：沾湿，润湿。形容雨水轻柔地润湿了尘土，用字极为精准。' },
+          { word: '轻尘', lineIndex: 0, startIndex: 5, note: '轻尘：路上的尘土。朝雨过后，尘土被润湿，道路清洁，暗含对友人此行的美好祝愿。' },
+          { word: '客舍', lineIndex: 1, startIndex: 0, note: '客舍：旅馆，供旅客住宿的地方。送别通常在旅馆门前进行，友人即将启程。' },
+          { word: '柳色新', lineIndex: 1, startIndex: 4, note: '柳色新：柳树在雨后更加翠绿清新。"柳"谐音"留"，是唐代送别的标志性意象，折柳相赠表达挽留之情。' },
+          { word: '更尽', lineIndex: 2, startIndex: 3, note: '更尽：再喝完，再干一杯。"更"字暗示此前已饮了多杯，这是最后一杯，情感最为深重。' },
+          { word: '阳关', lineIndex: 3, startIndex: 3, note: '阳关：汉代设置的关隘，位于今甘肃省敦煌市西南约70公里处，与玉门关并称"两关"，是古代中原通往西域的重要门户。' },
+          { word: '故人', lineIndex: 3, startIndex: 6, note: '故人：老朋友，旧相识。阳关以西是茫茫西域，此去将再无相识之人，道尽了离别的深情。' },
+        ],
         appreciation: `此诗又名《渭城曲》，是王维为送别友人元二出使安西（今新疆库车）而作，后被谱曲广泛传唱，又称《阳关三叠》。
 
 首句"渭城朝雨浥轻尘"，以清晨细雨润湿尘土的景象开篇，渭城（即秦代咸阳，位于今西安西北）的清晨，一场小雨洗净了道路上的尘埃，空气清新，万物一新。"浥"字极为精准，写出了雨的轻柔，恰到好处，不多不少。
@@ -130,6 +161,15 @@ export const locations: Location[] = [
           { lineIndex: 1, wordIndex: 2, answer: '吹', hint: '风的动作' },
           { lineIndex: 2, wordIndex: 1, answer: '愁', hint: '忧愁，担心' },
           { lineIndex: 3, wordIndex: 3, answer: '人', hint: '人，人们' },
+        ],
+        annotations: [
+          { word: '黄云', lineIndex: 0, startIndex: 2, note: '黄云：北方冬天沙尘弥漫时天空呈现的昏黄色云雾，渲染出苍茫萧瑟的送别氛围。' },
+          { word: '曛', lineIndex: 0, startIndex: 5, note: '曛（xūn）：日落时的昏黄之色，形容傍晚天色昏暗。此字较为生僻，是描写黄昏的专用字。' },
+          { word: '北风吹雁', lineIndex: 1, startIndex: 0, note: '北风吹雁：北风呼啸，大雁南飞。大雁南飞是秋冬季节的典型景象，也是古诗中思乡与离别的常见意象。' },
+          { word: '雪纷纷', lineIndex: 1, startIndex: 5, note: '雪纷纷：雪花纷纷扬扬地飘落。与"黄云""北风""吹雁"共同构成一幅苍茫萧瑟的北方冬日送别图。' },
+          { word: '莫愁', lineIndex: 2, startIndex: 0, note: '莫愁：不要忧愁，不必担心。是诗人对友人的劝慰之词，体现了高适豪迈乐观的性格。' },
+          { word: '知己', lineIndex: 2, startIndex: 5, note: '知己：了解自己、与自己心意相通的朋友。与王勃"海内存知己"中的"知己"含义相同，是古代友情的最高境界。' },
+          { word: '识君', lineIndex: 3, startIndex: 5, note: '识君：认识你，了解你的才华。"天下谁人不识君"是对友人才华的极高赞美，也是对其前途的美好祝愿。' },
         ],
         appreciation: `此诗是高适在送别著名琴师董庭兰时所作，以豪迈之情打破了送别诗惯常的悲戚基调。
 
@@ -176,6 +216,16 @@ export const locations: Location[] = [
           { lineIndex: 2, wordIndex: 2, answer: '远', hint: '遥远，远去' },
           { lineIndex: 3, wordIndex: 1, answer: '见', hint: '看见，只见' },
         ],
+        annotations: [
+          { word: '故人', lineIndex: 0, startIndex: 0, note: '故人：老朋友，旧相识。"故"有"旧、老"之意，"故人"比"友人"更显深厚的情谊。' },
+          { word: '西辞', lineIndex: 0, startIndex: 2, note: '西辞：向西告别，从西边出发离去。孟浩然从黄鹤楼（位于武汉）向东顺流而下前往扬州，故说"西辞"（在西边告别）。' },
+          { word: '黄鹤楼', lineIndex: 0, startIndex: 4, note: '黄鹤楼：位于今武汉市武昌区蛇山之巅，始建于三国时期，是"江南三大名楼"之首，因崔颢《黄鹤楼》而名满天下。' },
+          { word: '烟花三月', lineIndex: 1, startIndex: 0, note: '烟花三月：暮春时节江南烟雨迷蒙、繁花似锦的景象。"烟花"非现代烟火，而是指烟雾与花朵交织的美丽春色，是描写江南春景的经典意象。' },
+          { word: '下扬州', lineIndex: 1, startIndex: 5, note: '下扬州：顺流而下前往扬州。长江自西向东流，从武汉到扬州是顺流，故称"下"。扬州在唐代是全国最繁华的城市之一。' },
+          { word: '孤帆', lineIndex: 2, startIndex: 0, note: '孤帆：孤单的一叶帆船。"孤"字既写出了帆船的渺小，也暗含了诗人目送友人独自远去时的孤独感。' },
+          { word: '碧空尽', lineIndex: 2, startIndex: 4, note: '碧空尽：消失在碧蓝的天空尽头。帆船渐渐远去，直至完全消失在天际，诗人依然伫立凝望，情深意长。' },
+          { word: '天际流', lineIndex: 3, startIndex: 5, note: '天际流：向天边流去。长江之水滚滚东流，友人已去，而江水依旧，以景结情，余韵无穷。' },
+        ],
         appreciation: `此诗是李白在黄鹤楼送别好友孟浩然前往扬州时所作，是唐代送别诗中意境最为开阔、情感最为含蓄的佳作之一。
 
 首句"故人西辞黄鹤楼"，"故人"二字点出了深厚的友情，"西辞"说明孟浩然是从黄鹤楼向西出发，然后顺流而下。黄鹤楼作为送别之地，本身就带有浓厚的文化积淀——崔颢的《黄鹤楼》已使此楼名满天下。
@@ -211,6 +261,16 @@ export const locations: Location[] = [
           { lineIndex: 1, wordIndex: 5, answer: '一', hint: '数字，一天' },
           { lineIndex: 2, wordIndex: 3, answer: '啼', hint: '鸟兽叫声' },
           { lineIndex: 3, wordIndex: 1, answer: '舟', hint: '船' },
+        ],
+        annotations: [
+          { word: '白帝', lineIndex: 0, startIndex: 2, note: '白帝城：位于今重庆市奉节县，因城中有白帝庙而得名，是三峡的起点，也是刘备托孤之地，高踞山巅，气势雄伟。' },
+          { word: '彩云间', lineIndex: 0, startIndex: 4, note: '彩云间：彩云之间。白帝城建于山顶，清晨出发时云雾缭绕，仿佛从云端出发，极写地势之高。' },
+          { word: '江陵', lineIndex: 1, startIndex: 2, note: '江陵：今湖北省荆州市，位于长江中游，距白帝城约一千二百里。顺流而下一日可达，极写水流之急。' },
+          { word: '一日还', lineIndex: 1, startIndex: 5, note: '一日还：一天之内就能返回。"还"字写出了诗人遇赦后归心似箭的喜悦，也极写三峡水流之湍急。' },
+          { word: '猿声', lineIndex: 2, startIndex: 2, note: '猿声：猿猴的啼叫声。三峡两岸多猿猴，其声悲凄，自古是文人感叹之物。郦道元《水经注》称其"哀转久绝"。' },
+          { word: '啼不住', lineIndex: 2, startIndex: 4, note: '啼不住：啼叫声连续不断，停不下来。但轻舟行速极快，猿声还未停歇，船已驶过，以声衬速，妙趣横生。' },
+          { word: '轻舟', lineIndex: 3, startIndex: 0, note: '轻舟：轻快的小船。"轻"字既写船之小，也写行进之快，与"万重山"形成鲜明对比，突出了顺流行船的轻快感。' },
+          { word: '万重山', lineIndex: 3, startIndex: 4, note: '万重山：无数重叠的山峦，指三峡两岸的崇山峻岭。"万重"极言山之多、之险，衬托出轻舟穿越的迅速。' },
         ],
         appreciation: `此诗虽非典型送别诗，但写于李白流放途中遇赦返回，顺流而下经过三峡时，是一首充满喜悦的"归途诗"，与送别主题相关联，展现了长江水道的壮阔。
 
@@ -261,6 +321,16 @@ export const locations: Location[] = [
           { lineIndex: 3, wordIndex: 5, answer: '尽', hint: '喝完，尽饮' },
           { lineIndex: 5, wordIndex: 3, answer: '之', hint: '代词，代指东流水' },
         ],
+        annotations: [
+          { word: '柳花', lineIndex: 0, startIndex: 2, note: '柳花：柳絮，柳树的种子，春天随风飘飞。"柳"谐音"留"，是送别的经典意象，柳花飘入酒肆，将送别的情绪融入了热闹的场景。' },
+          { word: '吴姬', lineIndex: 1, startIndex: 0, note: '吴姬：吴地（今江苏一带）的女子，在唐代诗词中常作为江南美女的代称。金陵（今南京）属吴地，故称酒肆中的女子为"吴姬"。' },
+          { word: '压酒', lineIndex: 1, startIndex: 2, note: '压酒：用器具压榨酿好的酒，使酒液流出。古代酿酒后需要压榨过滤，"压酒"即指这道工序，说明是新鲜酿制的美酒。' },
+          { word: '子弟', lineIndex: 2, startIndex: 3, note: '子弟：年轻人，此处指金陵的年轻朋友们。"金陵子弟"是对金陵年轻一代的亲切称呼，体现了李白在金陵的广泛人缘。' },
+          { word: '欲行不行', lineIndex: 3, startIndex: 0, note: '欲行不行：将要出发却又迟迟不走。形容依依不舍的情态，既有诗人自己的留恋，也有送行者的挽留。' },
+          { word: '尽觞', lineIndex: 3, startIndex: 5, note: '尽觞（shāng）：喝干杯中的酒。觞，古代盛酒的器具，也指一杯酒。"各尽觞"意为大家各自将杯中酒喝干，以豪饮代替泪水，是李白式的送别方式。' },
+          { word: '东流水', lineIndex: 4, startIndex: 4, note: '东流水：向东流去的江水，指长江。长江自西向东流，"东流水"是古诗中象征时间流逝与离情绵长的经典意象。' },
+          { word: '别意', lineIndex: 5, startIndex: 0, note: '别意：离别的情意，送别的深情。诗人将抽象的离情与具体的东流水相比较，问哪个更长，是极富想象力的比喻。' },
+        ],
         appreciation: `此诗是李白离开金陵时，在酒肆中与送别的金陵子弟告别时所作，充满了洒脱豪迈的气息。
 
 首联"风吹柳花满店香，吴姬压酒唤客尝"，以生动的场景描写开篇：春风吹来，柳絮飘入酒肆，满店飘香；吴地的姑娘（吴姬）正在压榨新酒，热情地招呼客人品尝。这两句将送别的场所描绘得温馨而生动，与一般送别诗的萧瑟气氛大相径庭。
@@ -306,6 +376,13 @@ export const locations: Location[] = [
           { lineIndex: 2, wordIndex: 3, answer: '碧', hint: '碧绿，碧蓝' },
           { lineIndex: 3, wordIndex: 2, answer: '长', hint: '长江，长长的' },
         ],
+        annotations: [
+          { word: '广陵', lineIndex: 1, startIndex: 5, note: '广陵：扬州的古称，位于今江苏省扬州市。唐代扬州是全国最繁华的商业城市，"腰缠十万贯，骑鹤下扬州"是当时人们对富贵生活的最高想象。' },
+          { word: '烟花三月', lineIndex: 1, startIndex: 0, note: '烟花三月：暮春时节江南烟雨迷蒙、繁花似锦的景象。从扬州的角度看，这正是琼花盛开、运河两岸繁花似锦的最美时节。' },
+          { word: '孤帆远影', lineIndex: 2, startIndex: 0, note: '孤帆远影：孤单的帆船渐渐远去，只剩下一个模糊的影子。诗人目送友人的船帆渐渐消失在天际，这种目送的姿态是唐代送别诗中最动人的意象之一。' },
+          { word: '碧空尽', lineIndex: 2, startIndex: 4, note: '碧空尽：消失在碧蓝的天空尽头。帆影消失后，诗人依然伫立凝望，直至什么都看不见，情深意长。' },
+          { word: '天际流', lineIndex: 3, startIndex: 5, note: '天际流：向天边流去。长江之水滚滚东流，友人已去，而江水依旧，以景结情，将无尽的思念融入了永恒流动的江水之中。' },
+        ],
         appreciation: `（此诗同时标注于武汉·黄鹤楼，此处为扬州视角的赏析）
 
 从扬州的角度来看这首诗，"烟花三月下扬州"一句中的"扬州"正是孟浩然此行的目的地。扬州在唐代是全国最繁华的商业城市，"腰缠十万贯，骑鹤下扬州"是当时人们对富贵生活的最高想象。
@@ -337,6 +414,16 @@ export const locations: Location[] = [
           { lineIndex: 2, wordIndex: 2, answer: '十', hint: '数字，十里' },
           { lineIndex: 3, wordIndex: 1, answer: '上', hint: '向上卷起' },
           { lineIndex: 3, wordIndex: 4, answer: '总', hint: '总是，都' },
+        ],
+        annotations: [
+          { word: '娉娉袅袅', lineIndex: 0, startIndex: 0, note: '娉娉袅袅（pīng pīng niǎo niǎo）：形容女子体态轻盈、姿态优美的样子。四字叠用，将少女轻盈婀娜的姿态写得极为传神。' },
+          { word: '十三余', lineIndex: 0, startIndex: 5, note: '十三余：十三岁多一点，正是豆蔻年华。"余"表示稍多，说明刚刚超过十三岁，年龄的精确描写增添了诗的真实感。' },
+          { word: '豆蔻', lineIndex: 1, startIndex: 0, note: '豆蔻：一种植物，花苞初开时娇嫩可爱，常用来比喻少女的青春。"豆蔻年华"这一成语即源于此诗，后专指十三四岁的少女。' },
+          { word: '梢头', lineIndex: 1, startIndex: 2, note: '梢头：枝头，树枝的末端。豆蔻花开在枝头，"梢头"二字写出了花的位置，也暗示了少女的青春正如初开的花朵，娇嫩而美好。' },
+          { word: '二月初', lineIndex: 1, startIndex: 4, note: '二月初：早春二月初，豆蔻花刚刚开放的时节。以花初开比喻少女的青春，含蓄而优美，是中国古典诗歌中以物喻人的典范。' },
+          { word: '春风十里', lineIndex: 2, startIndex: 0, note: '春风十里：春风吹拂的十里扬州路。"十里"形容扬州街道的繁华绵延，"春风"既是自然景象，也烘托了温柔美好的氛围。' },
+          { word: '珠帘', lineIndex: 3, startIndex: 2, note: '珠帘：用珠子串成的帘子，是古代富贵人家或青楼的装饰。"卷上珠帘"意为卷起珠帘，露出帘后的美人，以此比较众多美女，都不如眼前这位少女。' },
+          { word: '总不如', lineIndex: 3, startIndex: 4, note: '总不如：全都比不上，都不如。以整座扬州城的美人来衬托一人之美，是极高的赞美，也是对扬州繁华的深情描绘。' },
         ],
         appreciation: `此诗是杜牧离开扬州时赠别一位歌女所作，以极为精炼的笔墨描绘了这位少女的美丽，并以扬州的繁华作为陪衬，将个人的离情融入对整座城市的深情回望。
 
@@ -382,6 +469,17 @@ export const locations: Location[] = [
           { lineIndex: 2, wordIndex: 2, answer: '何', hint: '为何，何必' },
           { lineIndex: 3, wordIndex: 2, answer: '不', hint: '否定词，不能' },
         ],
+        annotations: [
+          { word: '黄河远上', lineIndex: 0, startIndex: 0, note: '黄河远上：黄河之水仿佛从远处流来。此句以夸张手法描绘黄河的壮阔，仿佛黄河从白云之间流淌而来，气势磅礴。历来被认为是描写黄河最为传神的诗句之一。' },
+          { word: '白云间', lineIndex: 0, startIndex: 5, note: '白云间：白云之间。极言黄河发源地之高远，与"远上"相呼应，构成一幅雄浑壮阔的边塞图景。' },
+          { word: '孤城', lineIndex: 1, startIndex: 2, note: '孤城：孤零零的边城，指凉州城（今甘肃武威）。在万仞高山的包围中，边城显得格外渺小孤独，暗示了驻守将士的艰辛与孤独。' },
+          { word: '万仞山', lineIndex: 1, startIndex: 4, note: '万仞山：极高的山峰，万仞形容山势极高。仞，古代长度单位，约合今1.8米，万仞即约18000米，是夸张手法，极言山之高峻。' },
+          { word: '羌笛', lineIndex: 2, startIndex: 0, note: '羌笛：古代西北少数民族羌族的传统乐器，音色悲凉。在唐代边塞诗中是思乡与离别的重要意象，常与《折杨柳》曲调相联系。' },
+          { word: '何须怨', lineIndex: 2, startIndex: 2, note: '何须怨：何必抱怨，不必哀怨。以反问语气表达了更深的无奈——不是不想家，而是即便抱怨也无济于事，春风根本到不了这里。' },
+          { word: '杨柳', lineIndex: 2, startIndex: 5, note: '杨柳：此处指《折杨柳》曲调，是古代著名的送别思乡曲。"柳"谐音"留"，折柳送别是唐代的重要习俗，羌笛吹奏此曲更添思乡之情。' },
+          { word: '春风不度', lineIndex: 3, startIndex: 0, note: '春风不度：春风吹不到，到达不了。"不度"意为不能越过、到达不了，以春风象征温暖与希望，说明玉门关以外是春风都无法到达的苦寒之地。' },
+          { word: '玉门关', lineIndex: 3, startIndex: 4, note: '玉门关：汉代设置的关隘，位于今甘肃省敦煌市西北约90公里处，因西域输入玉石时经此关而得名，是古代丝绸之路的重要门户，也是边塞诗中的标志性地名。' },
+        ],
         appreciation: `此诗是唐代边塞诗的代表作之一，以雄浑苍凉的笔墨描绘了边塞的壮阔景象，并以"春风不度玉门关"一句道尽了边塞将士的思乡之情。
 
 首句"黄河远上白云间"，以极度夸张的手法描绘黄河的壮阔：黄河之水仿佛从白云之间流淌而来，气势磅礴，令人震撼。这一句历来被认为是描写黄河最为传神的诗句之一。
@@ -415,6 +513,15 @@ export const locations: Location[] = [
           { lineIndex: 2, wordIndex: 3, answer: '穿', hint: '穿透，磨穿' },
           { lineIndex: 3, wordIndex: 1, answer: '破', hint: '攻破，打败' },
         ],
+        annotations: [
+          { word: '青海', lineIndex: 0, startIndex: 0, note: '青海：青海湖，位于今青海省，是中国最大的内陆湖。唐代是重要的军事要地，唐蕃之间曾在此地区多次发生战争。' },
+          { word: '长云暗雪山', lineIndex: 0, startIndex: 2, note: '长云暗雪山：绵延的阴云遮蔽了雪山（祁连山）。"暗"字用作动词，写出了阴云的厚重，也烘托出边塞天气的阴沉压抑，为下文的豪迈誓言作铺垫。' },
+          { word: '孤城遥望', lineIndex: 1, startIndex: 0, note: '孤城遥望：孤立的边城遥遥望向玉门关。"孤城"写出了边塞的孤独，"遥望"则暗示了将士们对故乡的思念——望向玉门关，就是望向回家的方向。' },
+          { word: '黄沙百战', lineIndex: 2, startIndex: 0, note: '黄沙百战：在黄沙漫漫的边塞经历了无数次战斗。"百战"是夸张手法，形容战斗之多、之频繁，也写出了边塞战争的残酷与艰辛。' },
+          { word: '穿金甲', lineIndex: 2, startIndex: 4, note: '穿金甲：磨穿了坚硬的铠甲。"穿"字极为有力，以铠甲被磨穿来衬托战斗的激烈与时间的漫长，也反衬出将士们意志的坚定。' },
+          { word: '楼兰', lineIndex: 3, startIndex: 2, note: '楼兰：汉代西域古国，位于今新疆罗布泊附近，汉代时曾多次与汉朝为敌。在唐代诗歌中，"楼兰"已成为泛指西北边疆敌人的代称，并非特指某一具体国家。' },
+          { word: '终不还', lineIndex: 3, startIndex: 4, note: '终不还：誓死不回来，决不班师回朝。"终"字表示坚定的决心，"不还"是誓言，表达了将士们保家卫国、不破敌军誓不回还的英雄气概。' },
+        ],
         appreciation: `此诗是王昌龄《从军行》七首中最著名的一首，以雄浑豪迈的笔调表达了边塞将士保家卫国的坚定意志。
 
 首联"青海长云暗雪山，孤城遥望玉门关"，以宏阔的地理视野描绘边塞景象：青海湖上空阴云密布，遮蔽了祁连山的皑皑白雪；孤城（指玉门关附近的边城）遥遥望向玉门关。这两句以"暗"字写出了边塞天气的阴沉，以"孤城"写出了将士的孤独，为下文的豪迈誓言作了铺垫。
@@ -447,6 +554,16 @@ export const locations: Location[] = [
           { lineIndex: 1, wordIndex: 2, answer: '长', hint: '长途，遥远' },
           { lineIndex: 2, wordIndex: 2, answer: '龙', hint: '龙城，地名' },
           { lineIndex: 3, wordIndex: 3, answer: '马', hint: '马匹，骑兵' },
+        ],
+        annotations: [
+          { word: '秦时明月汉时关', lineIndex: 0, startIndex: 0, note: '秦时明月汉时关：互文修辞，应理解为"秦汉时代的明月与关隘"，而非分开理解。这种跨越时代的历史感，将个人的离别置于宏阔的历史背景之下，具有史诗般的厚重感。' },
+          { word: '万里长征', lineIndex: 1, startIndex: 0, note: '万里长征：踏上万里征途，远赴边疆作战。"万里"形容路途之遥远，"长征"指长途征战，从秦汉延续至今，无数将士踏上征途，却再也没有回来。' },
+          { word: '人未还', lineIndex: 1, startIndex: 5, note: '人未还：将士们再也没有回来。"未还"包含了战争的残酷与离别的悲痛，也暗示了无数家庭的骨肉分离，情感深沉而有力。' },
+          { word: '但使', lineIndex: 2, startIndex: 0, note: '但使：只要，假如。表示假设条件，引出后面的期望：只要有像李广那样的名将镇守边关，就能保卫国家。' },
+          { word: '龙城飞将', lineIndex: 2, startIndex: 2, note: '龙城飞将：指汉代名将李广。李广以善射著称，匈奴人称之为"汉之飞将军"，他在边塞镇守多年，令匈奴闻风丧胆。"龙城"是匈奴祭天之地，"飞将"是李广的绰号。' },
+          { word: '不教', lineIndex: 3, startIndex: 0, note: '不教：不让，不允许。"教"在此处是"让、使"的意思，"不教"即"不让"，表达了保卫边疆、不让敌人入侵的坚定决心。' },
+          { word: '胡马', lineIndex: 3, startIndex: 2, note: '胡马：胡人（北方游牧民族）的骑兵。"胡"是古代对北方少数民族的泛称，"胡马"代指北方游牧民族的军队。' },
+          { word: '度阴山', lineIndex: 3, startIndex: 4, note: '度阴山：越过阴山。阴山山脉横跨今内蒙古自治区，是中原与北方草原的天然分界线，也是历代王朝抵御北方游牧民族的重要屏障。"不教胡马度阴山"即不让敌军越过这道天然屏障。' },
         ],
         appreciation: `此诗是王昌龄最著名的边塞诗，被誉为唐代七绝的压卷之作，以深沉的历史感和强烈的爱国情怀，表达了对边塞战争的深刻思考。
 
@@ -492,6 +609,16 @@ export const locations: Location[] = [
           { lineIndex: 1, wordIndex: 2, answer: '送', hint: '送别，送行' },
           { lineIndex: 2, wordIndex: 4, answer: '如', hint: '如果，假如' },
           { lineIndex: 3, wordIndex: 2, answer: '冰', hint: '冰，冰清玉洁' },
+        ],
+        annotations: [
+          { word: '寒雨连江', lineIndex: 0, startIndex: 0, note: '寒雨连江：寒冷的雨水与江水连成一片。"连"字写出了雨势之大、之绵密，雨水与江水融为一体，渲染出送别时的凄冷氛围。' },
+          { word: '夜入吴', lineIndex: 0, startIndex: 4, note: '夜入吴：夜晚进入吴地（今江苏一带）。"夜"字点明了时间，寒雨在夜晚悄然而至，增添了送别的孤寂感。吴地即今江苏省一带，芙蓉楼位于润州（今镇江）。' },
+          { word: '平明', lineIndex: 1, startIndex: 0, note: '平明：天刚亮，黎明时分。送别发生在清晨，与前句"夜入吴"形成时间上的连贯，说明诗人在寒雨之夜等待，天亮时才送别友人。' },
+          { word: '楚山孤', lineIndex: 1, startIndex: 4, note: '楚山孤：楚地（今湖北、湖南一带）的山峦孤立。"孤"字既写山的孤立，也象征了诗人孤高的品格，以及送别后的孤独感。' },
+          { word: '洛阳亲友', lineIndex: 2, startIndex: 0, note: '洛阳亲友：在洛阳的亲人和朋友。辛渐此行要前往洛阳，诗人托他带话给洛阳的亲友，说明王昌龄在洛阳有许多挂念的人。' },
+          { word: '如相问', lineIndex: 2, startIndex: 4, note: '如相问：如果问起（我的近况）。"相问"是问候之意，诗人预想亲友们会关心自己的处境，于是托付友人带去这样的回答。' },
+          { word: '冰心', lineIndex: 3, startIndex: 2, note: '冰心：像冰一样清澈纯洁的心。以冰的清澈比喻内心的纯洁，表达了诗人在政治风波中坚守本心的决心。现代作家冰心（谢婉莹）的笔名即源于此。' },
+          { word: '玉壶', lineIndex: 3, startIndex: 5, note: '玉壶：玉制的壶，象征纯洁高雅。"冰心在玉壶"意为纯洁的心装在玉壶之中，以双重的纯洁意象表达了诗人高洁的品格，是中国文化中表达高洁品格的经典意象。' },
         ],
         appreciation: `此诗是王昌龄在润州（今江苏镇江）芙蓉楼送别友人辛渐前往洛阳时所作，以清澈如冰的意象表达了诗人高洁的品格与坦荡的胸怀。
 

@@ -1,6 +1,6 @@
 /*
  * TangMap.tsx - 唐代送别诗地图主组件（高德地图版）
- * 设计：水墨山水·宣纸质感 | 高德地图 + CSS滤镜实现古风地图效果
+ * 设计：水墨山水·宣纸质感 | 高德地图古风自定义样式
  * 功能：显示现代地图，标注今地名（旁注古地名），点击显示诗词列表
  * 注意：高德地图在中国境内可正常使用，无需科学上网
  */
@@ -36,7 +36,115 @@ const categoryLabels: Record<string, string> = {
   other: '其他',
 };
 
-const AMAP_KEY = import.meta.env.VITE_AMAP_KEY || '';
+// 高德地图古风水墨自定义样式
+// 使用高德内置的"幻影黑"或自定义宣纸色调
+const AMAP_STYLE_FEATURES = [
+  {
+    featureType: 'background',
+    elementType: 'geometry',
+    stylers: { color: '#f5edd6ff' },
+  },
+  {
+    featureType: 'land',
+    elementType: 'geometry',
+    stylers: { color: '#ede0c4ff' },
+  },
+  {
+    featureType: 'green',
+    elementType: 'geometry',
+    stylers: { color: '#c8d5a8ff' },
+  },
+  {
+    featureType: 'water',
+    elementType: 'geometry',
+    stylers: { color: '#b9d3c2ff' },
+  },
+  {
+    featureType: 'highway',
+    elementType: 'geometry',
+    stylers: { color: '#f3d19cff' },
+  },
+  {
+    featureType: 'highway',
+    elementType: 'geometry.stroke',
+    stylers: { color: '#e9bc62ff' },
+  },
+  {
+    featureType: 'arterial',
+    elementType: 'geometry',
+    stylers: { color: '#fdfcf8ff' },
+  },
+  {
+    featureType: 'local',
+    elementType: 'geometry',
+    stylers: { color: '#f8f1e4ff' },
+  },
+  {
+    featureType: 'railway',
+    elementType: 'geometry',
+    stylers: { color: '#dfd2aeff' },
+  },
+  {
+    featureType: 'subway',
+    elementType: 'geometry',
+    stylers: { color: '#dfd2aeff' },
+  },
+  {
+    featureType: 'building',
+    elementType: 'geometry',
+    stylers: { color: '#e8d5b0ff' },
+  },
+  {
+    featureType: 'poi',
+    elementType: 'geometry',
+    stylers: { color: '#dfd2aeff' },
+  },
+  {
+    featureType: 'administrative',
+    elementType: 'geometry',
+    stylers: { color: '#c9b49aff' },
+  },
+  {
+    featureType: 'administrative',
+    elementType: 'labels.text.fill',
+    stylers: { color: '#3d2b1fff' },
+  },
+  {
+    featureType: 'administrative',
+    elementType: 'labels.text.stroke',
+    stylers: { color: '#f5edd6ff' },
+  },
+  {
+    featureType: 'label',
+    elementType: 'labels.text.fill',
+    stylers: { color: '#3d2b1fff' },
+  },
+  {
+    featureType: 'label',
+    elementType: 'labels.text.stroke',
+    stylers: { color: '#f5edd6ff' },
+  },
+  {
+    featureType: 'city',
+    elementType: 'labels.text.fill',
+    stylers: { color: '#5a3e2bff' },
+  },
+  {
+    featureType: 'town',
+    elementType: 'labels.text.fill',
+    stylers: { color: '#7a5a3aff' },
+  },
+  {
+    featureType: 'road',
+    elementType: 'labels.text.fill',
+    stylers: { color: '#806b63ff' },
+  },
+];
+
+// 加载高德地图脚本（使用免费的无密钥模式或申请key）
+// 注意：生产环境请在高德开放平台申请API Key
+// 申请地址：https://lbs.amap.com/
+const AMAP_KEY = import.meta.env.VITE_AMAP_KEY || ''; // 从环境变量读取
 
 function loadAMapScript(): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -53,7 +161,8 @@ function loadAMapScript(): Promise<void> {
     window._amapLoadCallbacks = [resolve];
 
     const script = document.createElement('script');
-    script.src = `https://webapi.amap.com/maps?v=2.0&key=${AMAP_KEY}&plugin=AMap.Scale`;
+    // 使用高德地图JS API 2.0，支持中国境内访问
+    script.src = `https://webapi.amap.com/maps?v=2.0&key=${AMAP_KEY}&plugin=AMap.Scale,AMap.ToolBar,AMap.MapType`;
     script.async = true;
     script.onload = () => {
       window._amapLoaded = true;
@@ -61,7 +170,7 @@ function loadAMapScript(): Promise<void> {
       window._amapLoadCallbacks = [];
     };
     script.onerror = () => {
-      reject(new Error('高德地图加载失败，请检查网络连接'));
+      reject(new Error('高德地图加载失败'));
     };
     document.head.appendChild(script);
   });
@@ -71,9 +180,8 @@ export default function TangMap({ onLocationSelect, highlightedLocationId, onMap
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const markersRef = useRef<Map<string, any>>(new Map());
+  const labelsRef = useRef<Map<string, any>>(new Map());
   const [mapLoaded, setMapLoaded] = useState(false);
-  const mapLoadedRef = useRef(false);
-  const [, setForceUpdate] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
   const onLocationSelectRef = useRef(onLocationSelect);
   const onMapReadyRef = useRef(onMapReady);
@@ -95,22 +203,24 @@ export default function TangMap({ onLocationSelect, highlightedLocationId, onMap
       const AMap = window.AMap;
       if (!AMap) throw new Error('AMap未加载');
 
-      // 创建地图实例
-      // 使用 whitesmoke（远山黛）作为基础样式，再通过CSS滤镜叠加古风色调
+      // 创建地图实例 - 使用古风地图样式
       const map = new AMap.Map(mapContainerRef.current, {
         zoom: 5,
         center: [105, 35.5],
-        mapStyle: 'amap://styles/whitesmoke',
-        features: ['bg', 'road', 'point'],
+        // macaron: 温暖米黄色调，最接近古地图风格
+        mapStyle: 'amap://styles/macaron',
+        features: ['bg', 'road', 'building', 'point'],
         viewMode: '2D',
         lang: 'zh_cn',
         showLabel: true,
         showBuildingBlock: false,
         rotateEnable: false,
         pitchEnable: false,
+        // 限制缩放范围：最小3（亚洲范围），最大11（城市级，不显示建筑细节）
+        zooms: [3, 11],
       });
 
-      // 添加比例尺（右下角）
+      // 添加比例尺
       const scale = new AMap.Scale({
         visible: true,
         position: { bottom: '30px', right: '10px' },
@@ -119,17 +229,22 @@ export default function TangMap({ onLocationSelect, highlightedLocationId, onMap
 
       mapRef.current = map;
 
-      // 隐藏高德地图版权标志
-      const hideStyle = document.createElement('style');
-      hideStyle.textContent = `
-        .amap-logo,
-        .amap-copyright {
-          display: none !important;
-          opacity: 0 !important;
-          visibility: hidden !important;
-        }
-      `;
-      document.head.appendChild(hideStyle);
+      // 隐藏高德地图版权标志（左下角的 logo 和版权信息）
+      // 注意：根据高德地图服务条款，商业应用应保留版权标识
+      // 如需商用，请联系高德获取授权
+      const hideAmapLogo = () => {
+        const style = document.createElement('style');
+        style.textContent = `
+          .amap-logo,
+          .amap-copyright {
+            display: none !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+          }
+        `;
+        document.head.appendChild(style);
+      };
+      hideAmapLogo();
 
       // 添加标注点
       locations.forEach(loc => {
@@ -147,166 +262,169 @@ export default function TangMap({ onLocationSelect, highlightedLocationId, onMap
         `;
         markerContent.innerHTML = `
           <div style="
-            width: 38px;
-            height: 38px;
+            width: 36px;
+            height: 36px;
             border-radius: 50% 50% 50% 0;
             transform: rotate(-45deg);
             background: ${color};
-            border: 2.5px solid rgba(255,255,255,0.95);
-            box-shadow: 0 3px 14px rgba(0,0,0,0.35), 0 1px 4px rgba(0,0,0,0.2);
+            border: 2.5px solid rgba(255,255,255,0.9);
+            box-shadow: 0 3px 12px rgba(0,0,0,0.3), 0 1px 4px rgba(0,0,0,0.2);
             display: flex;
             align-items: center;
             justify-content: center;
+            transition: transform 0.2s, box-shadow 0.2s;
           ">
-            <span style="
+            <div style="
+              width: 10px;
+              height: 10px;
+              border-radius: 50%;
+              background: rgba(255,255,255,0.9);
               transform: rotate(45deg);
-              color: white;
-              font-size: 13px;
-              font-weight: 700;
-              font-family: 'Ma Shan Zheng', serif;
-              text-shadow: 0 1px 2px rgba(0,0,0,0.3);
-            ">${loc.modernName.charAt(0)}</span>
+            "></div>
           </div>
           <div style="
-            margin-top: 4px;
-            background: rgba(245,237,214,0.97);
-            border: 1px solid #c9b49a;
-            border-radius: 2px;
-            padding: 2px 6px;
-            white-space: nowrap;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+            margin-top: 6px;
             text-align: center;
+            pointer-events: none;
           ">
             <div style="
-              font-size: 12px;
-              font-weight: 700;
+              font-family: 'Ma Shan Zheng', serif;
+              font-size: 13px;
+              font-weight: 600;
               color: #1a1a1a;
-              font-family: 'Noto Serif SC', serif;
-              line-height: 1.4;
+              text-shadow: 0 1px 3px rgba(245,237,214,0.95), 0 0 8px rgba(245,237,214,0.9);
+              line-height: 1.3;
+              white-space: nowrap;
             ">${loc.modernName}</div>
             <div style="
+              font-family: 'Noto Serif SC', serif;
               font-size: 10px;
               color: #8B6914;
-              font-family: 'Noto Serif SC', serif;
-              line-height: 1.3;
+              text-shadow: 0 1px 2px rgba(245,237,214,0.9);
+              white-space: nowrap;
+              margin-top: 1px;
             ">古为${loc.ancientName}</div>
           </div>
         `;
+
+        // 悬停效果
+        const pinEl = markerContent.querySelector('div') as HTMLDivElement;
+        markerContent.addEventListener('mouseenter', () => {
+          if (pinEl) {
+            pinEl.style.transform = 'rotate(-45deg) scale(1.15)';
+            pinEl.style.boxShadow = `0 6px 20px rgba(0,0,0,0.4), 0 2px 8px ${color}80`;
+          }
+        });
+        markerContent.addEventListener('mouseleave', () => {
+          if (pinEl) {
+            pinEl.style.transform = 'rotate(-45deg) scale(1)';
+            pinEl.style.boxShadow = '0 3px 12px rgba(0,0,0,0.3), 0 1px 4px rgba(0,0,0,0.2)';
+          }
+        });
 
         const marker = new AMap.Marker({
           position: new AMap.LngLat(loc.lng, loc.lat),
           content: markerContent,
           offset: new AMap.Pixel(0, 0),
           zIndex: 100,
+          title: loc.modernName,
         });
 
         marker.on('click', () => {
           onLocationSelectRef.current(loc);
+          map.setCenter([loc.lng, loc.lat]);
+          map.setZoom(7);
         });
 
         marker.setMap(map);
         markersRef.current.set(loc.id, marker);
       });
 
-      map.on('complete', () => {
-        mapLoadedRef.current = true;
-        setMapLoaded(true);
-        onMapReadyRef.current?.();
-      });
-
-      // 超时保护
-      setTimeout(() => {
-        if (!mapLoadedRef.current) setMapLoaded(true);
-      }, 3000);
-
+      setMapLoaded(true);
+      onMapReadyRef.current?.();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : '地图加载失败';
-      setLoadError(msg);
+      console.error('地图初始化失败:', err);
+      setLoadError('地图加载失败，请检查网络连接');
     }
   }, []);
 
   useEffect(() => {
     initMap();
+    return () => {
+      if (mapRef.current) {
+        mapRef.current.destroy();
+        mapRef.current = null;
+      }
+    };
   }, [initMap]);
 
   // 高亮指定地点
   useEffect(() => {
-    if (!mapRef.current || !highlightedLocationId) return;
+    if (!mapLoaded || !highlightedLocationId || !mapRef.current) return;
 
-    const loc = locations.find(l => l.id === highlightedLocationId);
-    if (!loc) return;
+    const location = locations.find(l => l.id === highlightedLocationId);
+    if (!location) return;
 
-    mapRef.current.setZoomAndCenter(7, new window.AMap.LngLat(loc.lng, loc.lat), false, 600);
+    const map = mapRef.current;
+    map.setCenter([location.lng, location.lat]);
+    map.setZoom(7);
 
-    // 标注抖动动画
+    // 标注闪烁动画
     const marker = markersRef.current.get(highlightedLocationId);
     if (marker) {
-      const el = marker.getContent();
-      if (el) {
-        el.style.transition = 'transform 0.15s ease';
-        el.style.transform = 'translateX(-50%) translateY(-100%) scale(1.25)';
-        setTimeout(() => {
-          el.style.transform = 'translateX(-50%) translateY(-100%) scale(1)';
+      const content = marker.getContent() as HTMLDivElement;
+      const pinEl = content?.querySelector('div') as HTMLDivElement;
+      if (pinEl) {
+        let count = 0;
+        const interval = setInterval(() => {
+          count++;
+          pinEl.style.transform = count % 2 === 0
+            ? 'rotate(-45deg) scale(1)'
+            : 'rotate(-45deg) scale(1.25)';
+          if (count >= 6) {
+            clearInterval(interval);
+            pinEl.style.transform = 'rotate(-45deg) scale(1)';
+          }
         }, 300);
       }
     }
-  }, [highlightedLocationId]);
+  }, [highlightedLocationId, mapLoaded]);
 
   return (
     <div className="relative w-full h-full">
-      {/* 地图容器 - 应用CSS滤镜实现古风色调 */}
-      <div
-        ref={mapContainerRef}
-        className="w-full h-full"
-        style={{
-          // CSS滤镜：sepia棕褐色 + 降低饱和度 + 轻微提亮
-          // 将现代地图转换为仿古地图色调
-          filter: 'sepia(45%) saturate(70%) brightness(1.05) contrast(0.95)',
-        }}
-      />
+      {/* 地图容器 */}
+      <div ref={mapContainerRef} className="w-full h-full" />
 
-      {/* 宣纸纹理叠加层 - 增加古风质感 */}
-      <div
-        className="absolute inset-0 pointer-events-none z-[1]"
-        style={{
-          background: `
-            url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E")
-          `,
-          mixBlendMode: 'multiply',
-          opacity: 0.6,
-        }}
-      />
-
-      {/* 地图加载中 */}
+      {/* 加载状态 */}
       {!mapLoaded && !loadError && (
-        <div
-          className="absolute inset-0 flex flex-col items-center justify-center z-50"
-          style={{ background: '#f5edd6' }}
-        >
-          <div
-            className="text-lg mb-4 text-[#3d2b1f]"
-            style={{ fontFamily: 'Ma Shan Zheng, serif' }}
-          >
-            地图加载中…
-          </div>
-          <div className="flex gap-1.5 justify-center">
-            {[0, 1, 2].map(i => (
-              <div
-                key={i}
-                className="w-2 h-2 rounded-full animate-bounce"
-                style={{
-                  background: '#C0392B',
-                  animationDelay: `${i * 0.15}s`,
-                }}
-              />
-            ))}
+        <div className="absolute inset-0 flex items-center justify-center"
+          style={{ background: '#f5edd6' }}>
+          <div className="text-center">
+            <div
+              className="text-2xl mb-3 animate-pulse"
+              style={{ fontFamily: 'Ma Shan Zheng, serif', color: '#8B6914' }}
+            >
+              地图加载中…
+            </div>
+            <div className="flex gap-1.5 justify-center">
+              {[0, 1, 2].map(i => (
+                <div
+                  key={i}
+                  className="w-2 h-2 rounded-full animate-bounce"
+                  style={{
+                    background: '#C0392B',
+                    animationDelay: `${i * 0.15}s`,
+                  }}
+                />
+              ))}
+            </div>
           </div>
         </div>
       )}
 
       {/* 加载错误 */}
       {loadError && (
-        <div className="absolute inset-0 flex items-center justify-center z-50"
+        <div className="absolute inset-0 flex items-center justify-center"
           style={{ background: '#f5edd6' }}>
           <div className="text-center px-8">
             <div
@@ -336,7 +454,7 @@ export default function TangMap({ onLocationSelect, highlightedLocationId, onMap
       <div
         className="absolute top-4 right-4 z-10 rounded-sm p-3 shadow-md"
         style={{
-          background: 'rgba(245,237,214,0.95)',
+          background: 'rgba(245,237,214,0.92)',
           border: '1px solid #c9b49a',
           backdropFilter: 'blur(4px)',
         }}

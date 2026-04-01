@@ -2,12 +2,13 @@
  * PoemModal.tsx - 诗词详情弹窗
  * 设计：卷轴展开动画，宣纸质感，包含诗词原文/赏析/课外知识/填词游戏入口
  * 功能：展示诗词全文，赏析，课外小知识；右下角有"挑战填词"按钮
+ *       诗词原文支持点击词语弹出课本式注释
  */
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, BookOpen, Lightbulb, Feather, ChevronDown, ChevronUp } from 'lucide-react';
-import { type Poem, type Location } from '@/data/poems';
+import { type Poem, type Location, type Annotation } from '@/data/poems';
 
 interface PoemModalProps {
   poem: Poem | null;
@@ -16,11 +17,196 @@ interface PoemModalProps {
   onStartGame: (poem: Poem) => void;
 }
 
+// 注释气泡组件
+function AnnotationBubble({
+  word,
+  annotation,
+  onClose,
+}: {
+  word: string;
+  annotation: string;
+  onClose: () => void;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 6, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 4, scale: 0.95 }}
+      transition={{ duration: 0.18 }}
+      className="fixed z-[200] max-w-[260px] rounded-sm shadow-xl"
+      style={{
+        background: 'linear-gradient(160deg, #fdf6e3 0%, #f5edd6 100%)',
+        border: '1px solid #c9b49a',
+        boxShadow: '0 8px 24px rgba(30,20,10,0.25)',
+      }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      {/* 顶部装饰条 */}
+      <div className="h-1 w-full rounded-t-sm" style={{ background: 'linear-gradient(90deg, #C0392B, #8B6914, #C0392B)' }} />
+      <div className="p-3">
+        <div className="flex items-center justify-between mb-1.5">
+          <span
+            className="text-base font-bold text-[#C0392B]"
+            style={{ fontFamily: 'Ma Shan Zheng, serif', letterSpacing: '0.1em' }}
+          >
+            {word}
+          </span>
+          <button
+            onClick={onClose}
+            className="text-[#8B6914] hover:text-[#C0392B] transition-colors ml-2"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+        <div
+          className="text-xs text-[#3d2b1f] leading-5"
+          style={{ fontFamily: 'Noto Serif SC, serif' }}
+        >
+          {annotation}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// 可注释的诗句行
+function AnnotatedLine({
+  line,
+  annotations,
+  lineIndex,
+}: {
+  line: string;
+  annotations: Record<string, string>;
+  lineIndex: number;
+}) {
+  const [activeAnnotation, setActiveAnnotation] = useState<{
+    word: string;
+    text: string;
+    x: number;
+    y: number;
+  } | null>(null);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // 点击外部关闭注释
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setActiveAnnotation(null);
+      }
+    };
+    if (activeAnnotation) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [activeAnnotation]);
+
+  // 将诗句拆分为可注释的词语片段
+  const renderLine = () => {
+    const chars = line.split('');
+    const result: React.ReactNode[] = [];
+    let i = 0;
+
+    while (i < chars.length) {
+      // 尝试匹配最长的注释词语（最多4字）
+      let matched = false;
+      for (let len = Math.min(4, chars.length - i); len >= 1; len--) {
+        const word = chars.slice(i, i + len).join('');
+        if (annotations[word]) {
+          const wordIndex = i;
+          result.push(
+            <span
+              key={`${lineIndex}-${wordIndex}`}
+              className="relative inline-block cursor-pointer"
+              style={{
+                color: '#8B2500',
+                borderBottom: '1px dotted #C0392B',
+                textDecoration: 'none',
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                const rect = (e.target as HTMLElement).getBoundingClientRect();
+                const bubbleWidth = 260;
+                const viewportWidth = window.innerWidth;
+                let x = rect.left;
+                // 防止气泡超出右边界
+                if (x + bubbleWidth > viewportWidth - 16) {
+                  x = viewportWidth - bubbleWidth - 16;
+                }
+                const y = rect.bottom + 6;
+                setActiveAnnotation(
+                  activeAnnotation?.word === word && activeAnnotation?.x === x
+                    ? null
+                    : { word, text: annotations[word], x, y }
+                );
+              }}
+            >
+              {word}
+            </span>
+          );
+          i += len;
+          matched = true;
+          break;
+        }
+      }
+      if (!matched) {
+        result.push(
+          <span key={`${lineIndex}-${i}`} className="inline-block">
+            {chars[i]}
+          </span>
+        );
+        i++;
+      }
+    }
+    return result;
+  };
+
+  return (
+    <div ref={containerRef} className="relative">
+      <motion.div
+        initial={{ opacity: 0, y: 5 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: lineIndex * 0.1 }}
+        className="text-xl text-[#1a1a1a] leading-loose tracking-widest"
+        style={{ fontFamily: 'Noto Serif SC, serif', textShadow: '0 1px 2px rgba(245,237,214,0.5)' }}
+      >
+        {renderLine()}
+      </motion.div>
+
+      {/* 注释气泡 - 用 portal 渲染到 body */}
+      <AnimatePresence>
+        {activeAnnotation && (
+          <div
+            style={{
+              position: 'fixed',
+              left: activeAnnotation.x,
+              top: activeAnnotation.y,
+              zIndex: 9999,
+            }}
+          >
+            <AnnotationBubble
+              word={activeAnnotation.word}
+              annotation={activeAnnotation.text}
+              onClose={() => setActiveAnnotation(null)}
+            />
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 export default function PoemModal({ poem, location, onClose, onStartGame }: PoemModalProps) {
   const [activeTab, setActiveTab] = useState<'poem' | 'appreciation' | 'trivia'>('poem');
   const [expandedTrivia, setExpandedTrivia] = useState<number | null>(null);
 
   if (!poem || !location) return null;
+
+  // 将 Annotation[] 转换为 Record<string, string>，方便词语查找
+  const annotations: Record<string, string> = {};
+  (poem.annotations ?? []).forEach((a: Annotation) => {
+    annotations[a.word] = a.note;
+  });
 
   return (
     <AnimatePresence>
@@ -73,6 +259,13 @@ export default function PoemModal({ poem, location, onClose, onStartGame }: Poem
             <p className="text-sm text-[#5a4030]" style={{ fontFamily: 'Noto Serif SC, serif' }}>
               {poem.author}
             </p>
+
+            {/* 注释提示 */}
+            {Object.keys(annotations).length > 0 && activeTab === 'poem' && (
+              <p className="text-xs text-[#8B6914]/70 mt-1.5" style={{ fontFamily: 'Noto Serif SC, serif' }}>
+                💡 点击<span style={{ color: '#8B2500', borderBottom: '1px dotted #C0392B' }}>标注词语</span>可查看注释
+              </p>
+            )}
           </div>
 
           {/* 标签页 */}
@@ -123,16 +316,12 @@ export default function PoemModal({ poem, location, onClose, onStartGame }: Poem
                     }}
                   >
                     {poem.lines.map((line, i) => (
-                      <motion.div
+                      <AnnotatedLine
                         key={i}
-                        initial={{ opacity: 0, y: 5 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: i * 0.1 }}
-                        className="text-xl text-[#1a1a1a] leading-loose tracking-widest"
-                        style={{ fontFamily: 'Noto Serif SC, serif', textShadow: '0 1px 2px rgba(245,237,214,0.5)' }}
-                      >
-                        {line}
-                      </motion.div>
+                        line={line}
+                        annotations={annotations}
+                        lineIndex={i}
+                      />
                     ))}
                     <div className="mt-4 text-sm text-[#8B6914]" style={{ fontFamily: 'Noto Serif SC, serif' }}>
                       —— {poem.dynasty} · {poem.author}

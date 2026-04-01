@@ -312,9 +312,7 @@ export default function FillGame({ poem, onClose }: FillGameProps) {
               </div>
 
               <div className="flex-1 overflow-y-auto px-6 py-6">
-                <div className="mb-4 p-3 rounded-sm text-xs text-[#5a4030] bg-[#f0e6c8]/60 border border-[#c9b49a]/60" style={{ fontFamily: 'Noto Serif SC, serif' }}>
-                  每行诗句已隐藏，点击行首提示可查看完整诗句，尝试在不看的情况下背诵全诗。
-                </div>
+  
 
                 <div className="space-y-3">
                   {poem.lines.map((line, idx) => (
@@ -337,13 +335,13 @@ export default function FillGame({ poem, onClose }: FillGameProps) {
                           >
                             {idx + 1}
                           </span>
-                          <span className="text-sm text-[#8B6914]" style={{ fontFamily: 'Noto Serif SC, serif' }}>
-                            {revealedLines.has(idx) ? '点击隐藏' : `提示：${poem.reciteHint[idx] || line[0]}…`}
+                          <span className="text-sm text-[#8B6914]/60" style={{ fontFamily: 'Noto Serif SC, serif' }}>
+                            {revealedLines.has(idx) ? '点击隐藏' : '点击查看'}
                           </span>
                         </div>
                         {revealedLines.has(idx)
                           ? <EyeOff className="w-4 h-4 text-[#8B6914]" />
-                          : <Eye className="w-4 h-4 text-[#8B6914]" />
+                          : <Eye className="w-4 h-4 text-[#8B6914]/40" />
                         }
                       </button>
                       

@@ -2,8 +2,8 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
-import { invokeLLM } from "./_core/llm";
 import { z } from "zod";
+import axios from "axios";
 
 export const appRouter = router({
   system: systemRouter,
@@ -18,7 +18,7 @@ export const appRouter = router({
     }),
   }),
 
-  // 古风智能体对话接口
+  // 古风智能体对话接口 - 使用火山引擎豆包模型
   agent: router({
     chat: publicProcedure
       .input(z.object({
@@ -29,7 +29,7 @@ export const appRouter = router({
         })).optional().default([]),
       }))
       .mutation(async ({ input }) => {
-        const systemPrompt = `你是"诗仙引路人"，一位精通唐代诗歌与历史的古风智能体，专注于唐代送别诗文化。你的职责是：
+        const systemPrompt = `你是"唐代驿使"，一位精通唐代诗歌与历史的古风智能体，专注于唐代送别诗文化。你的职责是：
 
 1. 解答关于唐代送别诗的问题，包括诗词赏析、历史背景、地理信息等
 2. 重点讲解以下地点的送别文化：
@@ -51,20 +51,47 @@ export const appRouter = router({
 如果用户问的问题超出唐代送别诗范围，可以礼貌地引导回到主题。`;
 
         const messages = [
-          { role: "system" as const, content: systemPrompt },
+          { role: "system", content: systemPrompt },
           ...input.history.map(h => ({
-            role: h.role as "user" | "assistant",
+            role: h.role,
             content: h.content,
           })),
-          { role: "user" as const, content: input.message },
+          { role: "user", content: input.message },
         ];
 
+        const arkApiKey = process.env.ARK_API_KEY;
+        if (!arkApiKey) {
+          throw new Error("ARK_API_KEY 未配置");
+        }
+
         try {
-          const response = await invokeLLM({ messages });
-          const reply = response.choices?.[0]?.message?.content ?? "诗仙暂时无法回应，请稍后再试。";
+          // 调用火山引擎豆包模型 (OpenAI兼容接口)
+          const response = await axios.post(
+            "https://ark.cn-beijing.volces.com/api/v3/chat/completions",
+            {
+              model: "doubao-seed-2-0-lite-260215",
+              messages,
+              max_tokens: 1024,
+              temperature: 0.8,
+            },
+            {
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${arkApiKey}`,
+              },
+              timeout: 30000,
+            }
+          );
+
+          const reply = response.data?.choices?.[0]?.message?.content ?? "驿使暂时无法回应，请稍后再试。";
           return { reply };
         } catch (error) {
-          console.error("[Agent Chat Error]", error);
+          console.error("[Doubao API Error]", error);
+          if (axios.isAxiosError(error)) {
+            const status = error.response?.status;
+            const msg = error.response?.data?.error?.message ?? error.message;
+            console.error(`[Doubao] HTTP ${status}: ${msg}`);
+          }
           throw new Error("智能体服务暂时不可用，请稍后重试");
         }
       }),
