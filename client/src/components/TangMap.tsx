@@ -573,27 +573,6 @@ export default function TangMap({ onLocationSelect, highlightedLocationId, onMap
         </div>
       )}
 
-      {/* 審图号和地图来源标注 - 右下角比例尺下方，符合《公开地图内容表示规范》 */}
-      {mapLoaded && (
-        <div
-          className="absolute bottom-2 right-2 z-10 flex items-center gap-1.5"
-          style={{
-            background: 'rgba(245,237,214,0.88)',
-            border: '1px solid rgba(201,180,154,0.6)',
-            borderRadius: '2px',
-            padding: '3px 8px',
-            backdropFilter: 'blur(2px)',
-          }}
-        >
-          <span
-            className="text-[10px] text-[#5a4030] leading-tight"
-            style={{ fontFamily: 'Noto Serif SC, serif' }}
-          >
-            审图号：{approvalNumber} | 数据来源：高德软件有限公司
-          </span>
-        </div>
-      )}
-
       {/* 图例 - 右上角 */}
       <div
         className="absolute top-4 right-4 z-10 rounded-sm p-3 shadow-md"
