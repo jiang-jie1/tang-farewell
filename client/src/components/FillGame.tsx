@@ -22,10 +22,57 @@ interface AnswerState {
   revealed: boolean;
 }
 
+interface RandomBlank {
+  lineIndex: number;
+  wordIndex: number;
+  answer: string;
+}
+
+// 生成隨機挖空位置（使用與 poem.blanks 相同的數量）
+function generateRandomBlanks(poem: Poem): RandomBlank[] {
+  const blanks: RandomBlank[] = [];
+  const used = new Set<string>();
+  const targetCount = poem.blanks.length;
+
+  // 收集所有可能的挖空位置
+  const candidates: RandomBlank[] = [];
+  poem.lines.forEach((line, lineIndex) => {
+    for (let wordIndex = 0; wordIndex < line.length; wordIndex++) {
+      const char = line[wordIndex];
+      // 跳過標點符號和空格
+      if (!/[\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ffa-zA-Z0-9]/.test(char)) continue;
+      
+      candidates.push({
+        lineIndex,
+        wordIndex,
+        answer: char,
+      });
+    }
+  });
+
+  // 隨機選擇指定數量的挖空位置
+  const shuffled = candidates.sort(() => Math.random() - 0.5);
+  
+  for (const blank of shuffled) {
+    if (blanks.length >= targetCount) break;
+    const key = `${blank.lineIndex}-${blank.wordIndex}`;
+    if (!used.has(key)) {
+      blanks.push(blank);
+      used.add(key);
+    }
+  }
+
+  // 按行和列排序
+  return blanks.sort((a, b) => 
+    a.lineIndex !== b.lineIndex ? a.lineIndex - b.lineIndex : a.wordIndex - b.wordIndex
+  );
+}
+
 export default function FillGame({ poem, onClose }: FillGameProps) {
+  const [randomBlanks] = useState<RandomBlank[]>(() => generateRandomBlanks(poem));
   const [phase, setPhase] = useState<GamePhase>('fill');
   const [answers, setAnswers] = useState<AnswerState[]>(
-    poem.blanks.map(() => ({ value: '', status: 'idle', revealed: false }))
+    randomBlanks.map(() => ({ value: '', status: 'idle', revealed: false }))
   );
   const [submitted, setSubmitted] = useState(false);
   const [score, setScore] = useState(0);
@@ -34,7 +81,7 @@ export default function FillGame({ poem, onClose }: FillGameProps) {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const allCorrect = answers.every(a => a.status === 'correct');
-  const totalBlanks = poem.blanks.length;
+  const totalBlanks = randomBlanks.length;
 
   const handleInput = (idx: number, value: string) => {
     if (submitted) return;
@@ -46,7 +93,7 @@ export default function FillGame({ poem, onClose }: FillGameProps) {
   const handleSubmit = () => {
     const newAnswers = answers.map((a, i) => ({
       ...a,
-      status: a.value.trim() === poem.blanks[i].answer ? 'correct' as const : 'wrong' as const,
+      status: a.value.trim() === randomBlanks[i].answer ? 'correct' as const : 'wrong' as const,
     }));
     setAnswers(newAnswers);
     setSubmitted(true);
@@ -59,14 +106,14 @@ export default function FillGame({ poem, onClose }: FillGameProps) {
   };
 
   const handleRetry = () => {
-    setAnswers(poem.blanks.map(() => ({ value: '', status: 'idle', revealed: false })));
+    setAnswers(randomBlanks.map(() => ({ value: '', status: 'idle', revealed: false })));
     setSubmitted(false);
     setScore(0);
   };
 
   const handleReveal = (idx: number) => {
     const newAnswers = [...answers];
-    newAnswers[idx] = { ...newAnswers[idx], value: poem.blanks[idx].answer, status: 'correct', revealed: true };
+    newAnswers[idx] = { ...newAnswers[idx], value: randomBlanks[idx].answer, status: 'correct', revealed: true };
     setAnswers(newAnswers);
   };
 
@@ -86,7 +133,7 @@ export default function FillGame({ poem, onClose }: FillGameProps) {
   // 渲染诗句（带填空）
   const renderPoemWithBlanks = () => {
     return poem.lines.map((line, lineIdx) => {
-      const blanksInLine = poem.blanks
+      const blanksInLine = randomBlanks
         .map((b, bIdx) => ({ ...b, bIdx }))
         .filter(b => b.lineIndex === lineIdx);
 
@@ -128,7 +175,7 @@ export default function FillGame({ poem, onClose }: FillGameProps) {
                   if (e.key === 'ArrowRight' || e.key === 'Tab') {
                     e.preventDefault();
                     const nextIdx = blank.bIdx + 1;
-                    if (nextIdx < poem.blanks.length) inputRefs.current[nextIdx]?.focus();
+                    if (nextIdx < randomBlanks.length) inputRefs.current[nextIdx]?.focus();
                   }
                 }}
               />
