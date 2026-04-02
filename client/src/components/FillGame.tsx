@@ -1,7 +1,7 @@
 /*
- * FillGame.tsx - 填词游戏 + 背诵环节（随机挖空版本）
+ * FillGame.tsx - 填词游戏 + 背诵环节
  * 设计：古风宣纸风格，填词正确后有墨迹晕染动画
- * 流程：随机挖空 → 填词游戏 → 答对所有 → 进入背诵环节
+ * 流程：填词游戏 → 答对所有 → 进入背诵环节
  */
 
 import { useState, useRef, useEffect } from 'react';
@@ -22,58 +22,10 @@ interface AnswerState {
   revealed: boolean;
 }
 
-interface RandomBlank {
-  lineIndex: number;
-  wordIndex: number;
-  answer: string;
-  hint: string;
-}
-
-// 生成随机挖空位置
-function generateRandomBlanks(poem: Poem, count: number = 5): RandomBlank[] {
-  const blanks: RandomBlank[] = [];
-  const used = new Set<string>();
-
-  // 收集所有可能的挖空位置（每行最多挖空1-2个字）
-  const candidates: RandomBlank[] = [];
-  poem.lines.forEach((line, lineIndex) => {
-    for (let wordIndex = 0; wordIndex < line.length; wordIndex++) {
-      const char = line[wordIndex];
-      // 跳过标点符号和空格
-      if (!/[\u4e00-\u9fff\u3040-\u309f\u30a0-\u30ffa-zA-Z0-9]/.test(char)) continue;
-      
-      candidates.push({
-        lineIndex,
-        wordIndex,
-        answer: char,
-        hint: `第${lineIndex + 1}句第${wordIndex + 1}字`,
-      });
-    }
-  });
-
-  // 随机选择指定数量的挖空位置
-  const targetCount = Math.min(count, candidates.length);
-  const shuffled = candidates.sort(() => Math.random() - 0.5);
-  
-  for (const blank of shuffled) {
-    if (blanks.length >= targetCount) break;
-    const key = `${blank.lineIndex}-${blank.wordIndex}`;
-    if (!used.has(key)) {
-      blanks.push(blank);
-      used.add(key);
-    }
-  }
-
-  return blanks.sort((a, b) => 
-    a.lineIndex !== b.lineIndex ? a.lineIndex - b.lineIndex : a.wordIndex - b.wordIndex
-  );
-}
-
 export default function FillGame({ poem, onClose }: FillGameProps) {
-  const [randomBlanks] = useState<RandomBlank[]>(() => generateRandomBlanks(poem, 5));
   const [phase, setPhase] = useState<GamePhase>('fill');
   const [answers, setAnswers] = useState<AnswerState[]>(
-    randomBlanks.map(() => ({ value: '', status: 'idle', revealed: false }))
+    poem.blanks.map(() => ({ value: '', status: 'idle', revealed: false }))
   );
   const [submitted, setSubmitted] = useState(false);
   const [score, setScore] = useState(0);
@@ -82,7 +34,7 @@ export default function FillGame({ poem, onClose }: FillGameProps) {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const allCorrect = answers.every(a => a.status === 'correct');
-  const totalBlanks = randomBlanks.length;
+  const totalBlanks = poem.blanks.length;
 
   const handleInput = (idx: number, value: string) => {
     if (submitted) return;
@@ -94,7 +46,7 @@ export default function FillGame({ poem, onClose }: FillGameProps) {
   const handleSubmit = () => {
     const newAnswers = answers.map((a, i) => ({
       ...a,
-      status: a.value.trim() === randomBlanks[i].answer ? 'correct' as const : 'wrong' as const,
+      status: a.value.trim() === poem.blanks[i].answer ? 'correct' as const : 'wrong' as const,
     }));
     setAnswers(newAnswers);
     setSubmitted(true);
@@ -107,14 +59,14 @@ export default function FillGame({ poem, onClose }: FillGameProps) {
   };
 
   const handleRetry = () => {
-    setAnswers(randomBlanks.map(() => ({ value: '', status: 'idle', revealed: false })));
+    setAnswers(poem.blanks.map(() => ({ value: '', status: 'idle', revealed: false })));
     setSubmitted(false);
     setScore(0);
   };
 
   const handleReveal = (idx: number) => {
     const newAnswers = [...answers];
-    newAnswers[idx] = { ...newAnswers[idx], value: randomBlanks[idx].answer, status: 'correct', revealed: true };
+    newAnswers[idx] = { ...newAnswers[idx], value: poem.blanks[idx].answer, status: 'correct', revealed: true };
     setAnswers(newAnswers);
   };
 
@@ -126,250 +78,332 @@ export default function FillGame({ poem, onClose }: FillGameProps) {
 
   const toggleRevealLine = (idx: number) => {
     const newSet = new Set(revealedLines);
-    if (newSet.has(idx)) {
-      newSet.delete(idx);
-    } else {
-      newSet.add(idx);
-    }
+    if (newSet.has(idx)) newSet.delete(idx);
+    else newSet.add(idx);
     setRevealedLines(newSet);
   };
 
-  // 构建显示文本（带挖空）
-  const displayLines = poem.lines.map((line, lineIndex) => {
-    let result = '';
-    for (let wordIndex = 0; wordIndex < line.length; wordIndex++) {
-      const blank = randomBlanks.find(b => b.lineIndex === lineIndex && b.wordIndex === wordIndex);
-      if (blank) {
-        const answerIdx = randomBlanks.indexOf(blank);
-        const answer = answers[answerIdx];
-        if (submitted && answer.status === 'correct') {
-          result += answer.value || '_';
-        } else if (answer.revealed) {
-          result += answer.value || '_';
-        } else {
-          result += '___';
-        }
-      } else {
-        result += line[wordIndex];
+  // 渲染诗句（带填空）
+  const renderPoemWithBlanks = () => {
+    return poem.lines.map((line, lineIdx) => {
+      const blanksInLine = poem.blanks
+        .map((b, bIdx) => ({ ...b, bIdx }))
+        .filter(b => b.lineIndex === lineIdx);
+
+      if (blanksInLine.length === 0) {
+        return (
+          <div key={lineIdx} className="poem-line text-center text-[#1a1a1a]">
+            {line}
+          </div>
+        );
       }
-    }
-    return result;
-  });
+
+      // 构建带填空的行
+      let chars = line.split('');
+      const elements: React.ReactNode[] = [];
+      let charIdx = 0;
+
+      while (charIdx < chars.length) {
+        const blank = blanksInLine.find(b => b.wordIndex === charIdx);
+        if (blank) {
+          const ans = answers[blank.bIdx];
+          elements.push(
+            <span key={`blank-${blank.bIdx}`} className="inline-flex items-center mx-0.5">
+              <input
+                ref={el => { inputRefs.current[blank.bIdx] = el; }}
+                type="text"
+                maxLength={1}
+                value={ans.value}
+                onChange={e => handleInput(blank.bIdx, e.target.value)}
+                disabled={submitted && ans.status === 'correct'}
+                className="w-8 h-8 text-center text-lg border-b-2 bg-transparent outline-none transition-all"
+                style={{
+                  fontFamily: 'Noto Serif SC, serif',
+                  borderColor: ans.status === 'correct' ? '#2E7D32' : ans.status === 'wrong' ? '#C0392B' : '#8B6914',
+                  color: ans.status === 'correct' ? '#2E7D32' : ans.status === 'wrong' ? '#C0392B' : '#1a1a1a',
+                  background: ans.status === 'correct' ? 'rgba(46,125,50,0.08)' : ans.status === 'wrong' ? 'rgba(192,57,43,0.08)' : 'transparent',
+                }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') handleSubmit();
+                  if (e.key === 'ArrowRight' || e.key === 'Tab') {
+                    e.preventDefault();
+                    const nextIdx = blank.bIdx + 1;
+                    if (nextIdx < poem.blanks.length) inputRefs.current[nextIdx]?.focus();
+                  }
+                }}
+              />
+              {submitted && ans.status === 'wrong' && !ans.revealed && (
+                <button
+                  onClick={() => handleReveal(blank.bIdx)}
+                  className="ml-1 text-[#8B6914] hover:text-[#C0392B]"
+                  title="查看答案"
+                >
+                  <Eye className="w-3 h-3" />
+                </button>
+              )}
+            </span>
+          );
+          charIdx++;
+        } else {
+          elements.push(
+            <span key={`char-${charIdx}`} className="text-[#1a1a1a]">
+              {chars[charIdx]}
+            </span>
+          );
+          charIdx++;
+        }
+      }
+
+      return (
+        <div key={lineIdx} className="poem-line text-center flex items-center justify-center flex-wrap">
+          {elements}
+        </div>
+      );
+    });
+  };
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <AnimatePresence>
       <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.9 }}
-        className="bg-gradient-to-b from-[#fffbf0] to-[#f5ede6] rounded-lg shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto border-2 border-[#d4c5b0]"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-60 flex items-center justify-center p-4"
+        style={{ background: 'rgba(20,10,5,0.75)', backdropFilter: 'blur(6px)' }}
+        onClick={e => e.target === e.currentTarget && onClose()}
       >
-        {/* 标题栏 */}
-        <div className="sticky top-0 bg-gradient-to-r from-[#f5ede6] to-[#fffbf0] border-b-2 border-[#d4c5b0] p-4 flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-bold text-[#5a4030]">{poem.title}</h2>
-            <p className="text-sm text-[#8b7355]">{poem.author}·{poem.dynasty}</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1 hover:bg-[#e8dcc8] rounded-lg transition-colors"
-          >
-            <X size={24} className="text-[#8b7355]" />
-          </button>
-        </div>
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0.9, opacity: 0 }}
+          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+          className="relative w-full max-w-xl max-h-[90vh] flex flex-col rounded-sm overflow-hidden"
+          style={{
+            background: 'linear-gradient(160deg, #f5edd6 0%, #ede0c4 100%)',
+            boxShadow: '0 25px 70px rgba(20,10,5,0.5)',
+            border: '1px solid #c9b49a',
+          }}
+        >
+          <div className="h-1.5" style={{ background: 'linear-gradient(90deg, #8B6914, #C0392B, #8B6914)' }} />
 
-        {/* 游戏内容 */}
-        <div className="p-6">
-          <AnimatePresence mode="wait">
-            {phase === 'fill' && (
-              <motion.div
-                key="fill"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-              >
-                {/* 诗文显示（带挖空） */}
-                <div className="mb-6 p-4 bg-white/50 rounded-lg border border-[#d4c5b0]">
-                  <div className="space-y-3 font-serif text-lg text-[#5a4030] leading-relaxed">
-                    {displayLines.map((line, idx) => (
-                      <div key={idx} className="text-center">
-                        {line}
-                      </div>
-                    ))}
-                  </div>
+          {/* 填词游戏阶段 */}
+          {phase === 'fill' && (
+            <>
+              <div className="px-6 pt-5 pb-4 border-b border-[#c9b49a]/60 flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl text-[#1a1a1a]" style={{ fontFamily: 'Ma Shan Zheng, serif' }}>
+                    填词挑战
+                  </h3>
+                  <p className="text-xs text-[#8B6914] mt-0.5" style={{ fontFamily: 'Noto Serif SC, serif' }}>
+                    《{poem.title}》— {poem.author} · 共{totalBlanks}处填空
+                  </p>
+                </div>
+                <button onClick={onClose} className="text-[#8B6914] hover:text-[#C0392B]">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto px-6 py-6">
+                {/* 提示 */}
+                <div className="mb-4 p-3 rounded-sm text-xs text-[#5a4030] bg-[#f0e6c8]/60 border border-[#c9b49a]/60" style={{ fontFamily: 'Noto Serif SC, serif' }}>
+                  请在空格处填入正确的字，按 Tab 或 → 切换到下一个空格，按 Enter 提交。
                 </div>
 
-                {/* 填空输入框 */}
-                <div className="mb-6 space-y-3">
-                  <h3 className="text-sm font-semibold text-[#8b7355]">请填写挖空的字词：</h3>
-                  <div className="grid grid-cols-2 gap-3">
-                    {randomBlanks.map((blank, idx) => (
-                      <motion.div
-                        key={idx}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.05 }}
-                        className="flex items-center gap-2"
-                      >
-                        <label className="text-xs text-[#8b7355] min-w-fit">
-                          第{blank.lineIndex + 1}句：
-                        </label>
-                        <div className="relative flex-1">
-                          <input
-                            ref={(el) => { if (el) inputRefs.current[idx] = el; }}
-                            type="text"
-                            value={answers[idx].value}
-                            onChange={e => handleInput(idx, e.target.value)}
-                            disabled={submitted}
-                            maxLength={4}
-                            placeholder="?"
-                            className={`w-full px-2 py-1 text-center rounded border-2 transition-colors ${
-                              answers[idx].status === 'correct'
-                                ? 'border-green-500 bg-green-50'
-                                : answers[idx].status === 'wrong'
-                                ? 'border-red-500 bg-red-50'
-                                : 'border-[#d4c5b0] bg-white'
-                            }`}
-                          />
-                          {answers[idx].status === 'correct' && (
-                            <CheckCircle size={16} className="absolute right-2 top-1/2 -translate-y-1/2 text-green-500" />
-                          )}
-                          {answers[idx].status === 'wrong' && (
-                            <XCircle size={16} className="absolute right-2 top-1/2 -translate-y-1/2 text-red-500" />
-                          )}
-                        </div>
-                        {submitted && (
-                          <button
-                            onClick={() => handleReveal(idx)}
-                            className="p-1 hover:bg-[#e8dcc8] rounded transition-colors"
-                            title="显示答案"
-                          >
-                            {answers[idx].revealed ? (
-                              <Eye size={16} className="text-[#8b7355]" />
-                            ) : (
-                              <EyeOff size={16} className="text-[#8b7355]" />
-                            )}
-                          </button>
-                        )}
-                      </motion.div>
-                    ))}
-                  </div>
+                {/* 诗词填空 */}
+                <div className="space-y-1 mb-6 p-4 rounded-sm" style={{ background: 'rgba(245,237,214,0.5)', border: '1px solid #c9b49a' }}>
+                  {renderPoemWithBlanks()}
                 </div>
 
-                {/* 提交按钮 */}
-                <div className="flex gap-3">
-                  {!submitted ? (
-                    <button
-                      onClick={handleSubmit}
-                      className="flex-1 bg-gradient-to-r from-[#8b4513] to-[#a0522d] hover:from-[#704010] hover:to-[#8b3a1f] text-white py-2 rounded-lg font-semibold transition-all"
-                    >
-                      提交答案
-                    </button>
-                  ) : (
-                    <>
-                      <button
-                        onClick={handleRetry}
-                        className="flex-1 bg-[#d4c5b0] hover:bg-[#c4b5a0] text-[#5a4030] py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2"
-                      >
-                        <RotateCcw size={16} />
-                        重新填写
-                      </button>
-                      {allCorrect && (
-                        <button
-                          onClick={handleEnterRecite}
-                          className="flex-1 bg-gradient-to-r from-[#8b4513] to-[#a0522d] hover:from-[#704010] hover:to-[#8b3a1f] text-white py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2"
-                        >
-                          进入背诵
-                          <ArrowRight size={16} />
-                        </button>
-                      )}
-                    </>
-                  )}
-                </div>
-
-                {submitted && (
-                  <div className="mt-4 text-center">
-                    <p className="text-sm text-[#8b7355]">
-                      得分：<span className="font-bold text-lg text-[#5a4030]">{score}/{totalBlanks}</span>
-                    </p>
+                {/* 提交后的提示 */}
+                {submitted && !allCorrect && (
+                  <div className="mb-4 flex items-center gap-2 text-sm text-[#C0392B]" style={{ fontFamily: 'Noto Serif SC, serif' }}>
+                    <XCircle className="w-4 h-4" />
+                    答对 {score}/{totalBlanks} 处，点击 <Eye className="w-3 h-3 inline" /> 查看答案，或重新作答
                   </div>
                 )}
-              </motion.div>
-            )}
 
-            {phase === 'success' && (
-              <motion.div
-                key="success"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="text-center py-8"
-              >
-                <motion.div
-                  animate={{ scale: [1, 1.1, 1] }}
-                  transition={{ duration: 0.6, repeat: 2 }}
-                >
-                  <CheckCircle size={64} className="text-green-500 mx-auto mb-4" />
-                </motion.div>
-                <h3 className="text-2xl font-bold text-[#5a4030] mb-2">完美！</h3>
-                <p className="text-[#8b7355] mb-6">所有空白都填写正确</p>
+                {submitted && allCorrect && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="mb-4 flex items-center gap-2 text-sm text-[#2E7D32]"
+                    style={{ fontFamily: 'Noto Serif SC, serif' }}
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    全部答对！才华横溢，不愧是诗词达人！
+                  </motion.div>
+                )}
+              </div>
+
+              <div className="px-6 pb-5 flex items-center justify-between border-t border-[#c9b49a]/40 pt-4">
                 <button
-                  onClick={handleEnterRecite}
-                  className="bg-gradient-to-r from-[#8b4513] to-[#a0522d] hover:from-[#704010] hover:to-[#8b3a1f] text-white px-6 py-2 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 mx-auto"
+                  onClick={handleRetry}
+                  className="flex items-center gap-1.5 text-sm text-[#8B6914] hover:text-[#C0392B] transition-colors"
+                  style={{ fontFamily: 'Noto Serif SC, serif' }}
                 >
-                  进入背诵环节
-                  <ArrowRight size={16} />
+                  <RotateCcw className="w-4 h-4" />
+                  重新作答
                 </button>
-              </motion.div>
-            )}
+                
+                {!submitted ? (
+                  <button onClick={handleSubmit} className="btn-seal" style={{ fontFamily: 'Ma Shan Zheng, serif' }}>
+                    提交答案
+                  </button>
+                ) : allCorrect ? (
+                  <button onClick={handleEnterRecite} className="btn-seal flex items-center gap-2" style={{ fontFamily: 'Ma Shan Zheng, serif' }}>
+                    进入背诵 <ArrowRight className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <button onClick={handleSubmit} className="btn-seal" style={{ fontFamily: 'Ma Shan Zheng, serif' }}>
+                    重新提交
+                  </button>
+                )}
+              </div>
+            </>
+          )}
 
-            {phase === 'recite' && (
+          {/* 成功过渡动画 */}
+          {phase === 'success' && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="flex-1 flex flex-col items-center justify-center p-8 text-center"
+            >
               <motion.div
-                key="recite"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', damping: 15 }}
+                className="w-20 h-20 rounded-full flex items-center justify-center mb-4"
+                style={{ background: 'rgba(46,125,50,0.1)', border: '2px solid #2E7D32' }}
               >
-                <h3 className="text-lg font-semibold text-[#5a4030] mb-4">背诵环节</h3>
+                <CheckCircle className="w-10 h-10 text-[#2E7D32]" />
+              </motion.div>
+              <h3 className="text-2xl text-[#1a1a1a] mb-2" style={{ fontFamily: 'Ma Shan Zheng, serif' }}>
+                才华横溢！
+              </h3>
+              <p className="text-sm text-[#5a4030] mb-6" style={{ fontFamily: 'Noto Serif SC, serif' }}>
+                全部填词正确，可以进入背诵环节了
+              </p>
+              <button
+                onClick={handleEnterRecite}
+                className="btn-seal flex items-center gap-2"
+                style={{ fontFamily: 'Ma Shan Zheng, serif', fontSize: '1.1rem' }}
+              >
+                开始背诵 <ArrowRight className="w-4 h-4" />
+              </button>
+            </motion.div>
+          )}
+
+          {/* 背诵环节 */}
+          {phase === 'recite' && (
+            <>
+              <div className="px-6 pt-5 pb-4 border-b border-[#c9b49a]/60 flex items-center justify-between">
+                <div>
+                  <h3 className="text-xl text-[#1a1a1a]" style={{ fontFamily: 'Ma Shan Zheng, serif' }}>
+                    背诵练习
+                  </h3>
+                  <p className="text-xs text-[#8B6914] mt-0.5" style={{ fontFamily: 'Noto Serif SC, serif' }}>
+                    《{poem.title}》— 点击每行查看完整诗句
+                  </p>
+                </div>
+                <button onClick={onClose} className="text-[#8B6914] hover:text-[#C0392B]">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto px-6 py-6">
+  
+
                 <div className="space-y-3">
                   {poem.lines.map((line, idx) => (
                     <motion.div
                       key={idx}
-                      initial={{ opacity: 0, x: -20 }}
+                      initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: idx * 0.1 }}
-                      className="p-3 bg-white/50 rounded-lg border border-[#d4c5b0] cursor-pointer hover:bg-white/70 transition-colors"
-                      onClick={() => toggleRevealLine(idx)}
+                      className="rounded-sm overflow-hidden"
+                      style={{ border: '1px solid #c9b49a', background: 'rgba(245,237,214,0.5)' }}
                     >
-                      <div className="text-center font-serif text-lg text-[#5a4030]">
-                        {revealedLines.has(idx) ? (
-                          line
-                        ) : (
-                          <span className="text-[#c4b5a0]">点击显示第{idx + 1}句</span>
+                      <button
+                        onClick={() => toggleRevealLine(idx)}
+                        className="w-full flex items-center justify-between px-4 py-3"
+                      >
+                        <div className="flex items-center gap-3">
+                          <span
+                            className="w-6 h-6 rounded-full flex items-center justify-center text-xs text-white shrink-0"
+                            style={{ background: '#8B6914' }}
+                          >
+                            {idx + 1}
+                          </span>
+                          <span className="text-sm text-[#8B6914]/60" style={{ fontFamily: 'Noto Serif SC, serif' }}>
+                            {revealedLines.has(idx) ? '点击隐藏' : '点击查看'}
+                          </span>
+                        </div>
+                        {revealedLines.has(idx)
+                          ? <EyeOff className="w-4 h-4 text-[#8B6914]" />
+                          : <Eye className="w-4 h-4 text-[#8B6914]/40" />
+                        }
+                      </button>
+                      
+                      <AnimatePresence>
+                        {revealedLines.has(idx) && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="overflow-hidden"
+                          >
+                            <div
+                              className="px-4 pb-3 text-lg text-center text-[#1a1a1a] tracking-widest border-t border-[#c9b49a]/40 pt-2"
+                              style={{ fontFamily: 'Noto Serif SC, serif' }}
+                            >
+                              {line}
+                            </div>
+                          </motion.div>
                         )}
-                      </div>
+                      </AnimatePresence>
                     </motion.div>
                   ))}
                 </div>
 
-                {poem.reciteHint && poem.reciteHint.length > 0 && (
-                  <div className="mt-6 p-4 bg-[#f5ede6] rounded-lg border border-[#d4c5b0]">
-                    <h4 className="text-sm font-semibold text-[#8b7355] mb-2">背诵提示（每句首字）：</h4>
-                    <p className="text-[#5a4030] font-serif text-lg tracking-widest">
-                      {poem.reciteHint.join(' ')}
-                    </p>
-                  </div>
-                )}
+                {/* 全文展示 */}
+                <div className="mt-6">
+                  <button
+                    onClick={() => {
+                      const allRevealed = poem.lines.every((_, i) => revealedLines.has(i));
+                      if (allRevealed) {
+                        setRevealedLines(new Set());
+                      } else {
+                        setRevealedLines(new Set(poem.lines.map((_, i) => i)));
+                      }
+                    }}
+                    className="w-full py-2 text-sm text-[#8B6914] border border-[#c9b49a] rounded-sm hover:bg-[#e8d5a3]/40 transition-colors"
+                    style={{ fontFamily: 'Noto Serif SC, serif' }}
+                  >
+                    {poem.lines.every((_, i) => revealedLines.has(i)) ? '隐藏全文' : '展示全文'}
+                  </button>
+                </div>
+              </div>
 
+              <div className="px-6 pb-5 flex items-center justify-between border-t border-[#c9b49a]/40 pt-4">
                 <button
-                  onClick={onClose}
-                  className="w-full mt-6 bg-[#d4c5b0] hover:bg-[#c4b5a0] text-[#5a4030] py-2 rounded-lg font-semibold transition-all"
+                  onClick={() => { setPhase('fill'); handleRetry(); }}
+                  className="flex items-center gap-1.5 text-sm text-[#8B6914] hover:text-[#C0392B] transition-colors"
+                  style={{ fontFamily: 'Noto Serif SC, serif' }}
                 >
-                  完成
+                  <RotateCcw className="w-4 h-4" />
+                  重新填词
                 </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+                <button onClick={onClose} className="btn-seal" style={{ fontFamily: 'Ma Shan Zheng, serif' }}>
+                  完成学习
+                </button>
+              </div>
+            </>
+          )}
+
+          <div className="h-1" style={{ background: 'linear-gradient(90deg, #8B6914, #C0392B, #8B6914)' }} />
+        </motion.div>
       </motion.div>
-    </div>
+    </AnimatePresence>
   );
 }
