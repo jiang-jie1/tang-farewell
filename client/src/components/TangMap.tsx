@@ -449,15 +449,34 @@ export default function TangMap({ onLocationSelect, highlightedLocationId, onMap
       setMapLoaded(true);
       onMapReadyRef.current?.();
 
-      // 尝试动态获取高德地图审图号
-      try {
-        const approvalNum = map.getMapContentApprovalNumber?.();
-        if (approvalNum && typeof approvalNum === 'string' && approvalNum.trim()) {
-          setApprovalNumber(approvalNum);
+      // 在地图完全渲染后动态获取审图号，并隐藏高德自带版权信息
+      const fetchApprovalNumber = () => {
+        try {
+          const approvalNum = map.getMapContentApprovalNumber?.();
+          if (approvalNum && typeof approvalNum === 'string' && approvalNum.trim()) {
+            setApprovalNumber(approvalNum);
+          }
+        } catch (_) {
+          // 获取失败，保留默认审图号
         }
-      } catch (_) {
-        // 如果获取失败，保留默认审图号
-      }
+
+        // 隐藏高德底图自带的 logo 和版权信息，避免与我们的审图号标注重复
+        const hideBuiltinCopyright = () => {
+          const logo = document.querySelector('.amap-logo') as HTMLElement;
+          const copyright = document.querySelector('.amap-copyright') as HTMLElement;
+          if (logo) logo.style.display = 'none';
+          if (copyright) copyright.style.display = 'none';
+        };
+        hideBuiltinCopyright();
+        // 延迟再执行一次，确保 DOM 已渲染
+        setTimeout(hideBuiltinCopyright, 500);
+        setTimeout(hideBuiltinCopyright, 1500);
+      };
+
+      // 地图 complete 事件后获取审图号
+      map.on('complete', fetchApprovalNumber);
+      // 也立即尝试一次（有时 complete 已经触发过了）
+      setTimeout(fetchApprovalNumber, 200);
     } catch (err) {
       console.error('地图初始化失败:', err);
       setLoadError('地图加载失败，请检查网络连接');
@@ -570,6 +589,28 @@ export default function TangMap({ onLocationSelect, highlightedLocationId, onMap
               重新加载
             </button>
           </div>
+        </div>
+      )}
+
+      {/* 审图号标注 - 右下角比例尺下方，符合《公开地图内容表示规范》 */}
+      {mapLoaded && (
+        <div
+          className="absolute bottom-2 right-2 z-10 flex items-center gap-1.5"
+          style={{
+            background: 'rgba(245,237,214,0.92)',
+            border: '1px solid rgba(201,180,154,0.7)',
+            borderRadius: '3px',
+            padding: '4px 10px',
+            backdropFilter: 'blur(3px)',
+            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+          }}
+        >
+          <span
+            className="text-[11px] text-[#3d2b1f] leading-tight font-medium"
+            style={{ fontFamily: 'Noto Serif SC, serif' }}
+          >
+            审图号：{approvalNumber} | 数据来源：高德软件有限公司
+          </span>
         </div>
       )}
 
