@@ -234,7 +234,7 @@ function loadAMapScript(): Promise<void> {
 
     const script = document.createElement('script');
     // 使用高德地图JS API 2.0，支持中国境内访问
-    script.src = `https://webapi.amap.com/maps?v=2.0&key=${AMAP_KEY}&plugin=AMap.Scale,AMap.ToolBar,AMap.MapType`;
+    script.src = `https://webapi.amap.com/maps?v=2.0&key=${AMAP_KEY}&plugin=AMap.Scale,AMap.ToolBar,AMap.MapType,AMap.DistrictLayer`;
     script.async = true;
     script.onload = () => {
       window._amapLoaded = true;
@@ -300,6 +300,36 @@ export default function TangMap({ onLocationSelect, highlightedLocationId, onMap
         // 限制缩放范围：最小4（中亚+东亚范围），最大9（城市级，不显示铁路/建筑细节）
         zooms: [4, 9],
       });
+
+      // 添加行政区划边界图层（符合《公开地图内容表示规范》）
+      // 使用 AMap.DistrictLayer 系列，确保国界线、省界线、市界线均正确显示
+      if (AMap.DistrictLayer) {
+        // 国界线（含各国边界）
+        const countryLayer = new AMap.DistrictLayer.Country({
+          zIndex: 10,
+          SOC: 'CHN',
+          depth: 2, // 0=国界, 1=省界, 2=市界
+          styles: {
+            'nation-stroke': '#8B4513',      // 国界线：深棕色，较粗
+            'coastline-stroke': '#2c5f7a',   // 海岸线：深蓝色
+            'province-stroke': '#a07850',    // 省界线：中棕色
+            'city-stroke': '#c4a882',        // 市界线：浅棕色
+            'fill': 'rgba(0,0,0,0)',         // 填充透明
+          },
+        });
+        countryLayer.setMap(map);
+
+        // 世界各国边界线
+        const worldLayer = new AMap.DistrictLayer.World({
+          zIndex: 9,
+          styles: {
+            'nation-stroke': '#8B6914',      // 各国边界：棕金色
+            'coastline-stroke': '#2c5f7a',   // 海岸线
+            'fill': 'rgba(0,0,0,0)',         // 填充透明
+          },
+        });
+        worldLayer.setMap(map);
+      }
 
       // 隐藏铁路、地铁等现代交通图层
       map.on('complete', () => {
