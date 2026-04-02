@@ -573,10 +573,10 @@ export default function TangMap({ onLocationSelect, highlightedLocationId, onMap
         </div>
       )}
 
-      {/* 審图号和地图来源标注 - 左下角，符合《公开地图内容表示规范》 */}
+      {/* 審图号和地图来源标注 - 右下角比例尺下方，符合《公开地图内容表示规范》 */}
       {mapLoaded && (
         <div
-          className="absolute bottom-2 left-2 z-10 flex items-center gap-1.5"
+          className="absolute bottom-2 right-2 z-10 flex items-center gap-1.5"
           style={{
             background: 'rgba(245,237,214,0.88)',
             border: '1px solid rgba(201,180,154,0.6)',
