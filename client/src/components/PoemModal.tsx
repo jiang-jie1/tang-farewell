@@ -7,7 +7,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, BookOpen, Lightbulb, Feather, ChevronDown, ChevronUp } from 'lucide-react';
-import { type Poem, type Location, type Annotation } from '@/data/poems';
+import { type Poem, type Location } from '@/data/poems';
 
 interface PoemModalProps {
   poem: Poem | null;
@@ -25,7 +25,7 @@ function PoemWithAnnotations({
   annotations: Record<string, string>;
 }) {
   const [showAnnotations, setShowAnnotations] = useState(false);
-  const hasAnnotations = (poem.annotations ?? []).length > 0;
+  const hasAnnotations = (poem.notes ?? []).length > 0;
 
   // 将诗句拆分，有注释的词语加下划线
   const renderLine = (line: string, lineIndex: number) => {
@@ -137,15 +137,15 @@ function PoemWithAnnotations({
                     border: '1px solid #c9b49a',
                   }}
                 >
-                  {(poem.annotations ?? []).map((ann: Annotation, idx: number) => (
+                  {(poem.notes ?? []).map((ann, idx) => (
                     <div
                       key={idx}
                       className="flex items-start gap-2 text-sm leading-6"
                       style={{
                         fontFamily: 'Noto Serif SC, serif',
                         color: '#3d2b1f',
-                        borderBottom: idx < (poem.annotations?.length ?? 0) - 1 ? '1px solid rgba(201,180,154,0.4)' : 'none',
-                        paddingBottom: idx < (poem.annotations?.length ?? 0) - 1 ? '0.5rem' : '0',
+                        borderBottom: idx < (poem.notes?.length ?? 0) - 1 ? '1px solid rgba(201,180,154,0.4)' : 'none',
+                        paddingBottom: idx < (poem.notes?.length ?? 0) - 1 ? '0.5rem' : '0',
                       }}
                     >
                       {/* 菱形符号 */}
@@ -158,7 +158,7 @@ function PoemWithAnnotations({
                       <span>
                         <span style={{ color: '#C0392B', fontWeight: '600' }}>{ann.word}</span>
                         <span style={{ color: '#8B6914' }}>：</span>
-                        {ann.note}
+                        {ann.explanation}
                       </span>
                     </div>
                   ))}
@@ -180,8 +180,8 @@ export default function PoemModal({ poem, location, onClose, onStartGame }: Poem
 
   // 将 Annotation[] 转换为 Record<string, string>，方便词语查找
   const annotations: Record<string, string> = {};
-  (poem.annotations ?? []).forEach((a: Annotation) => {
-    annotations[a.word] = a.note;
+  (poem.notes ?? []).forEach((a) => {
+    annotations[a.word] = a.explanation;
   });
 
   return (
@@ -327,59 +327,21 @@ export default function PoemModal({ poem, location, onClose, onStartGame }: Poem
                   transition={{ duration: 0.2 }}
                   className="p-6 space-y-3"
                 >
-                  {poem.trivia.map((item, idx) => (
+                  {poem.trivia && (
                     <motion.div
-                      key={idx}
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: idx * 0.08 }}
                       className="rounded-sm overflow-hidden"
                       style={{ border: '1px solid #c9b49a', background: 'rgba(245,237,214,0.5)' }}
                     >
-                      <button
-                        onClick={() => setExpandedTrivia(expandedTrivia === idx ? null : idx)}
-                        className="w-full flex items-center justify-between px-4 py-3 text-left"
+                      <div
+                        className="px-4 py-3 text-sm text-[#3d2b1f] leading-7"
+                        style={{ fontFamily: 'Noto Serif SC, serif' }}
                       >
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="w-5 h-5 rounded-full flex items-center justify-center text-xs text-white shrink-0"
-                            style={{ background: '#8B6914', fontFamily: 'Noto Serif SC, serif' }}
-                          >
-                            {idx + 1}
-                          </span>
-                          <span
-                            className="text-sm text-[#2d1f0f] font-medium line-clamp-1"
-                            style={{ fontFamily: 'Noto Serif SC, serif' }}
-                          >
-                            {item.slice(0, 25)}{item.length > 25 ? '…' : ''}
-                          </span>
-                        </div>
-                        {expandedTrivia === idx
-                          ? <ChevronUp className="w-4 h-4 text-[#8B6914] shrink-0" />
-                          : <ChevronDown className="w-4 h-4 text-[#8B6914] shrink-0" />
-                        }
-                      </button>
-                      
-                      <AnimatePresence>
-                        {expandedTrivia === idx && (
-                          <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.25 }}
-                            className="overflow-hidden"
-                          >
-                            <div
-                              className="px-4 pb-3 text-sm text-[#3d2b1f] leading-7 border-t border-[#c9b49a]/40"
-                              style={{ fontFamily: 'Noto Serif SC, serif' }}
-                            >
-                              {item}
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
+                        {poem.trivia}
+                      </div>
                     </motion.div>
-                  ))}
+                  )}
                   
                   <div className="flex justify-end mt-4">
                     <button

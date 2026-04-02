@@ -17,7 +17,6 @@ interface Location {
   id: string;
   modernName: string;
   ancientName: string;
-  province: string;
   category: string;
   poems: Poem[];
 }
@@ -37,8 +36,7 @@ function search(query: string, locations: Location[]) {
   locations.forEach((loc) => {
     if (
       loc.modernName.toLowerCase().includes(keyword) ||
-      loc.ancientName.toLowerCase().includes(keyword) ||
-      loc.province.toLowerCase().includes(keyword)
+      loc.ancientName.toLowerCase().includes(keyword)
     ) {
       results.push({
         type: "location",
@@ -83,8 +81,7 @@ const testLocations: Location[] = [
     id: "changan",
     modernName: "西安",
     ancientName: "长安",
-    province: "陕西省",
-    category: "capital",
+    category: "jingji",
     poems: [
       {
         id: "song_du_shaofu",
@@ -118,10 +115,9 @@ const testLocations: Location[] = [
   },
   {
     id: "weicheng",
-    modernName: "咸阳",
+    modernName: "咏阳",
     ancientName: "渭城",
-    province: "陕西省",
-    category: "capital",
+    category: "jingji",
     poems: [
       {
         id: "weicheng_qu",
@@ -136,8 +132,7 @@ const testLocations: Location[] = [
     id: "zhongnanshan",
     modernName: "终南山",
     ancientName: "终南山（山中）",
-    province: "陕西省",
-    category: "other",
+    category: "jingji",
     poems: [
       {
         id: "shan_zhong_song_bie",
@@ -152,8 +147,7 @@ const testLocations: Location[] = [
     id: "wuhan",
     modernName: "武汉",
     ancientName: "黄鹤楼（江夏）",
-    province: "湖北省",
-    category: "river",
+    category: "jianghan",
     poems: [
       {
         id: "huanghe_lou",
@@ -168,8 +162,7 @@ const testLocations: Location[] = [
     id: "taohuatan",
     modernName: "泾县",
     ancientName: "桃花潭",
-    province: "安徽省",
-    category: "river",
+    category: "jianghan",
     poems: [
       {
         id: "zeng_wang_lun",
@@ -184,8 +177,7 @@ const testLocations: Location[] = [
     id: "zhenjiang",
     modernName: "镇江",
     ancientName: "润州·芙蓉楼",
-    province: "江苏省",
-    category: "river",
+    category: "jianghan",
     poems: [
       {
         id: "fu_rong_lou",
@@ -200,7 +192,6 @@ const testLocations: Location[] = [
     id: "shangqiu",
     modernName: "商丘",
     ancientName: "睢阳",
-    province: "河南省",
     category: "other",
     poems: [
       {
@@ -216,8 +207,7 @@ const testLocations: Location[] = [
     id: "luntai",
     modernName: "轮台",
     ancientName: "轮台（北庭）",
-    province: "新疆维吾尔自治区",
-    category: "frontier",
+    category: "biansai",
     poems: [
       {
         id: "bai_xue_ge",
@@ -232,8 +222,7 @@ const testLocations: Location[] = [
     id: "jingmen",
     modernName: "荆门",
     ancientName: "荆门山",
-    province: "湖北省",
-    category: "river",
+    category: "jianghan",
     poems: [
       {
         id: "du_jingmen_songbie",
@@ -248,8 +237,7 @@ const testLocations: Location[] = [
     id: "yangzhou",
     modernName: "扬州",
     ancientName: "广陵",
-    province: "江苏省",
-    category: "river",
+    category: "jianghan",
     poems: [
       {
         id: "wen_wang_changling",
@@ -264,8 +252,7 @@ const testLocations: Location[] = [
     id: "jiangnan",
     modernName: "江南",
     ancientName: "江南（泛指）",
-    province: "江浙一带",
-    category: "river",
+    category: "jianghan",
     poems: [
       {
         id: "song_du_shisi",
@@ -280,8 +267,7 @@ const testLocations: Location[] = [
     id: "nanjing",
     modernName: "南京",
     ancientName: "金陵",
-    province: "江苏省",
-    category: "river",
+    category: "jianghan",
     poems: [
       {
         id: "jinling_jiusi",
@@ -335,11 +321,11 @@ describe("搜索功能", () => {
       expect(results[0].location.id).toBe("taohuatan");
     });
 
-    it("搜索省份（湖北）应返回武汉和荆门", () => {
-      const results = search("湖北", testLocations);
+    it("搜索今地名（武汉）应返回武汉地点", () => {
+      const results = search("武汉", testLocations);
       expect(results.length).toBeGreaterThan(0);
       const ids = results.map(r => r.location.id);
-      expect(ids.some(id => id === "wuhan" || id === "jingmen")).toBe(true);
+      expect(ids.some(id => id === "wuhan")).toBe(true);
     });
 
     it("搜索古地名（金陵）应返回南京", () => {

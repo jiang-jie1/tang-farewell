@@ -15,10 +15,10 @@ interface LocationPanelProps {
 }
 
 const categoryColors: Record<string, { bg: string; text: string; label: string }> = {
-  capital: { bg: '#C0392B', text: '#fff', label: '都城' },
-  river: { bg: '#2E7D32', text: '#fff', label: '水路枢纽' },
-  frontier: { bg: '#8B6914', text: '#fff', label: '边塞' },
-  other: { bg: '#4A4A8A', text: '#fff', label: '其他' },
+  jingji: { bg: '#8B4513', text: '#fff', label: '京畿地區' },
+  biansai: { bg: '#4A6741', text: '#fff', label: '邊塞地區' },
+  jianghan: { bg: '#2c5f7a', text: '#fff', label: '江漢水鄉' },
+  other: { bg: '#6B4C8B', text: '#fff', label: '其他' },
 };
 
 export default function LocationPanel({ location, onClose, onPoemSelect }: LocationPanelProps) {
@@ -55,9 +55,7 @@ export default function LocationPanel({ location, onClose, onPoemSelect }: Locat
                   >
                     {catStyle.label}
                   </span>
-                  <span className="text-xs text-[#8B6914]" style={{ fontFamily: 'Noto Serif SC, serif' }}>
-                    {location.province}
-                  </span>
+
                 </div>
                 <h2
                   className="text-2xl text-[#1a1a1a] leading-tight"

@@ -23,16 +23,16 @@ interface TangMapProps {
 }
 
 const categoryColors: Record<string, string> = {
-  capital: '#C0392B',
-  river: '#2E7D32',
-  frontier: '#8B6914',
-  other: '#4A4A8A',
+  jingji: '#8B4513',   // 深棕色 - 京畿地區
+  biansai: '#4A6741',  // 墨綠色 - 邊塞地區
+  jianghan: '#2c5f7a', // 深藍色 - 江漢水鄉
+  other: '#6B4C8B',    // 紫色 - 其他
 };
 
 const categoryLabels: Record<string, string> = {
-  capital: '都城',
-  river: '水路枢纽',
-  frontier: '边塞',
+  jingji: '京畿地區',
+  biansai: '邊塞地區',
+  jianghan: '江漢水鄉',
   other: '其他',
 };
 
@@ -429,7 +429,7 @@ export default function TangMap({ onLocationSelect, highlightedLocationId, onMap
         });
 
         const marker = new AMap.Marker({
-          position: new AMap.LngLat(loc.lng, loc.lat),
+          position: new AMap.LngLat(loc.coordinates[0], loc.coordinates[1]),
           content: markerContent,
           offset: new AMap.Pixel(0, 0),
           zIndex: 100,
@@ -438,7 +438,7 @@ export default function TangMap({ onLocationSelect, highlightedLocationId, onMap
 
         marker.on('click', () => {
           onLocationSelectRef.current(loc);
-          map.setCenter([loc.lng, loc.lat]);
+          map.setCenter([loc.coordinates[0], loc.coordinates[1]]);
           map.setZoom(7);
         });
 
@@ -501,7 +501,7 @@ export default function TangMap({ onLocationSelect, highlightedLocationId, onMap
     if (!location) return;
 
     const map = mapRef.current;
-    map.setCenter([location.lng, location.lat]);
+    map.setCenter([location.coordinates[0], location.coordinates[1]]);
     map.setZoom(7);
 
     // 标注闪烁动画

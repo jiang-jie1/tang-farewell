@@ -32,13 +32,13 @@ function doSearch(q: string): SearchResult[] {
     if (
       loc.modernName.toLowerCase().includes(keyword) ||
       loc.ancientName.toLowerCase().includes(keyword) ||
-      loc.province.toLowerCase().includes(keyword)
+      loc.modernName.toLowerCase().includes(keyword)
     ) {
       found.push({
         type: 'location',
         location: loc,
         matchText: `${loc.modernName}`,
-        subText: `古为${loc.ancientName} · ${loc.province}`,
+        subText: `古為${loc.ancientName}`,
       });
     }
 
