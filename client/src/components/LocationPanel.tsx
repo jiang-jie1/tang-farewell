@@ -15,9 +15,9 @@ interface LocationPanelProps {
 }
 
 const categoryColors: Record<string, { bg: string; text: string; label: string }> = {
-  jingji: { bg: '#8B4513', text: '#fff', label: '京畿地區' },
-  biansai: { bg: '#4A6741', text: '#fff', label: '邊塞地區' },
-  jianghan: { bg: '#2c5f7a', text: '#fff', label: '江漢水鄉' },
+  jingji: { bg: '#8B4513', text: '#fff', label: '京畿地区' },
+  biansai: { bg: '#4A6741', text: '#fff', label: '边塞地区' },
+  jianghan: { bg: '#2c5f7a', text: '#fff', label: '江汉水乡' },
   other: { bg: '#6B4C8B', text: '#fff', label: '其他' },
 };
 
@@ -66,7 +66,7 @@ export default function LocationPanel({ location, onClose, onPoemSelect }: Locat
                 <div className="flex items-center gap-1 mt-1">
                   <MapPin className="w-3 h-3 text-[#8B6914]" />
                   <span className="text-sm text-[#8B6914]" style={{ fontFamily: 'Noto Serif SC, serif' }}>
-                    古为{location.ancientName}
+                    古为{location.name}
                   </span>
                 </div>
               </div>

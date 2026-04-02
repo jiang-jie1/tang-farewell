@@ -223,7 +223,7 @@ export default function PoemModal({ poem, location, onClose, onStartGame }: Poem
                 {poem.dynasty}
               </span>
               <span className="text-xs text-[#8B6914]" style={{ fontFamily: 'Noto Serif SC, serif' }}>
-                {location.modernName} · {location.ancientName}
+                {location.modernName} · {location.name}
               </span>
             </div>
             <h2

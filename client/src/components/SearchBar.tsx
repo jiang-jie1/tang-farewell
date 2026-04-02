@@ -31,14 +31,13 @@ function doSearch(q: string): SearchResult[] {
     // 搜索今地名、古地名、省份
     if (
       loc.modernName.toLowerCase().includes(keyword) ||
-      loc.ancientName.toLowerCase().includes(keyword) ||
-      loc.modernName.toLowerCase().includes(keyword)
+      loc.name.toLowerCase().includes(keyword)
     ) {
       found.push({
         type: 'location',
         location: loc,
         matchText: `${loc.modernName}`,
-        subText: `古為${loc.ancientName}`,
+        subText: `古为${loc.name}`,
       });
     }
 
@@ -60,9 +59,9 @@ function doSearch(q: string): SearchResult[] {
             ? `${poem.author}·《${poem.title}》`
             : `"${matchLine?.trim()}"`,
           subText: titleMatch
-            ? `${poem.dynasty} · ${poem.author} | ${loc.modernName}（${loc.ancientName}）`
+            ? `${poem.dynasty} · ${poem.author} | ${loc.modernName}（${loc.name}）`
             : authorMatch
-            ? `${poem.dynasty} · ${loc.modernName}（${loc.ancientName}）`
+            ? `${poem.dynasty} · ${loc.modernName}（${loc.name}）`
             : `《${poem.title}》${poem.author} | ${loc.modernName}`,
         });
       }

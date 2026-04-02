@@ -23,16 +23,16 @@ interface TangMapProps {
 }
 
 const categoryColors: Record<string, string> = {
-  jingji: '#8B4513',   // 深棕色 - 京畿地區
-  biansai: '#4A6741',  // 墨綠色 - 邊塞地區
-  jianghan: '#2c5f7a', // 深藍色 - 江漢水鄉
+  jingji: '#8B4513',   // 深棕色 - 京畿地区
+  biansai: '#4A6741',  // 墨绿色 - 边塞地区
+  jianghan: '#2c5f7a', // 深蓝色 - 江汉水乡
   other: '#6B4C8B',    // 紫色 - 其他
 };
 
 const categoryLabels: Record<string, string> = {
-  jingji: '京畿地區',
-  biansai: '邊塞地區',
-  jianghan: '江漢水鄉',
+  jingji: '京畿地区',
+  biansai: '边塞地区',
+  jianghan: '江汉水乡',
   other: '其他',
 };
 
@@ -409,7 +409,7 @@ export default function TangMap({ onLocationSelect, highlightedLocationId, onMap
               text-shadow: 0 1px 2px rgba(245,237,214,0.9);
               white-space: nowrap;
               margin-top: 1px;
-            ">古为${loc.ancientName}</div>
+            ">古为${loc.name}</div>
           </div>
         `;
 
