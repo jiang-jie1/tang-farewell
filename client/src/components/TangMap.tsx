@@ -255,6 +255,7 @@ export default function TangMap({ onLocationSelect, highlightedLocationId, onMap
   const labelsRef = useRef<Map<string, any>>(new Map());
   const [mapLoaded, setMapLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [approvalNumber, setApprovalNumber] = useState<string>('GS（2025）5996号');
   const onLocationSelectRef = useRef(onLocationSelect);
   const onMapReadyRef = useRef(onMapReady);
 
@@ -281,8 +282,9 @@ export default function TangMap({ onLocationSelect, highlightedLocationId, onMap
         center: [105, 35.5],
         // 自定义古風样式：宣纸底色 + 水域蓝色 + 山脉墨色
         mapStyle: 'amap://styles/whitesmoke',
-        // 显示背景、道路、地名标注（point），隐藏建筑和POI图标
-        features: ['bg', 'road', 'point'],
+        // 显示背景、道路、地名标注（point）、行政区划边界线（district）
+        // 根据《公开地图内容表示规范》，必须显示国界线、省市县边界线
+        features: ['bg', 'road', 'point', 'district'],
         // 应用自定义古風样式
         customMapStyle: {
           styleJson: AMAP_STYLE_FEATURES,
@@ -319,23 +321,6 @@ export default function TangMap({ onLocationSelect, highlightedLocationId, onMap
       map.addControl(scale);
 
       mapRef.current = map;
-
-      // 隐藏高德地图版权标志（左下角的 logo 和版权信息）
-      // 注意：根据高德地图服务条款，商业应用应保留版权标识
-      // 如需商用，请联系高德获取授权
-      const hideAmapLogo = () => {
-        const style = document.createElement('style');
-        style.textContent = `
-          .amap-logo,
-          .amap-copyright {
-            display: none !important;
-            opacity: 0 !important;
-            visibility: hidden !important;
-          }
-        `;
-        document.head.appendChild(style);
-      };
-      hideAmapLogo();
 
       // 添加标注点
       locations.forEach(loc => {
@@ -433,6 +418,16 @@ export default function TangMap({ onLocationSelect, highlightedLocationId, onMap
 
       setMapLoaded(true);
       onMapReadyRef.current?.();
+
+      // 尝试动态获取高德地图审图号
+      try {
+        const approvalNum = map.getMapContentApprovalNumber?.();
+        if (approvalNum && typeof approvalNum === 'string' && approvalNum.trim()) {
+          setApprovalNumber(approvalNum);
+        }
+      } catch (_) {
+        // 如果获取失败，保留默认审图号
+      }
     } catch (err) {
       console.error('地图初始化失败:', err);
       setLoadError('地图加载失败，请检查网络连接');
@@ -545,6 +540,27 @@ export default function TangMap({ onLocationSelect, highlightedLocationId, onMap
               重新加载
             </button>
           </div>
+        </div>
+      )}
+
+      {/* 審图号和地图来源标注 - 左下角，符合《公开地图内容表示规范》 */}
+      {mapLoaded && (
+        <div
+          className="absolute bottom-2 left-2 z-10 flex items-center gap-1.5"
+          style={{
+            background: 'rgba(245,237,214,0.88)',
+            border: '1px solid rgba(201,180,154,0.6)',
+            borderRadius: '2px',
+            padding: '3px 8px',
+            backdropFilter: 'blur(2px)',
+          }}
+        >
+          <span
+            className="text-[10px] text-[#5a4030] leading-tight"
+            style={{ fontFamily: 'Noto Serif SC, serif' }}
+          >
+            审图号：{approvalNumber} | 数据来源：高德软件有限公司
+          </span>
         </div>
       )}
 
