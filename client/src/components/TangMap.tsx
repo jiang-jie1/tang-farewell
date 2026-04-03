@@ -255,7 +255,7 @@ export default function TangMap({ onLocationSelect, highlightedLocationId, onMap
   const labelsRef = useRef<Map<string, any>>(new Map());
   const [mapLoaded, setMapLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [approvalNumber, setApprovalNumber] = useState<string>('GS（2025）5996号');
+  const [approvalNumber, setApprovalNumber] = useState<string | null>(null);
   const onLocationSelectRef = useRef(onLocationSelect);
   const onMapReadyRef = useRef(onMapReady);
 
@@ -457,7 +457,7 @@ export default function TangMap({ onLocationSelect, highlightedLocationId, onMap
             setApprovalNumber(approvalNum);
           }
         } catch (_) {
-          // 获取失败，保留默认审图号
+          // 获取失败时保持“获取中”文案，避免展示过期固定审图号
         }
 
         // 隐藏高德底图自带的 logo 和版权信息，避免与我们的审图号标注重复
@@ -609,7 +609,7 @@ export default function TangMap({ onLocationSelect, highlightedLocationId, onMap
             className="text-[11px] text-[#3d2b1f] leading-tight font-medium"
             style={{ fontFamily: 'Noto Serif SC, serif' }}
           >
-            审图号：{approvalNumber} | 数据来源：高德软件有限公司
+            {approvalNumber ? `审图号：${approvalNumber}` : '审图号获取中...'} | 数据来源：高德软件有限公司
           </span>
         </div>
       )}
