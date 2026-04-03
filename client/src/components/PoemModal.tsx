@@ -7,7 +7,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, BookOpen, Lightbulb, Feather, ChevronDown, ChevronUp } from 'lucide-react';
-import { type Poem, type Location, type Annotation } from '@/data/poems';
+import { type Poem, type Location } from '@/data/poems';
 
 interface PoemModalProps {
   poem: Poem | null;
@@ -25,7 +25,7 @@ function PoemWithAnnotations({
   annotations: Record<string, string>;
 }) {
   const [showAnnotations, setShowAnnotations] = useState(false);
-  const hasAnnotations = (poem.annotations ?? []).length > 0;
+  const hasAnnotations = (poem.notes ?? []).length > 0;
 
   // 将诗句拆分，有注释的词语加下划线
   const renderLine = (line: string, lineIndex: number) => {
@@ -137,15 +137,15 @@ function PoemWithAnnotations({
                     border: '1px solid #c9b49a',
                   }}
                 >
-                  {(poem.annotations ?? []).map((ann: Annotation, idx: number) => (
+                  {(poem.notes ?? []).map((ann, idx: number) => (
                     <div
                       key={idx}
                       className="flex items-start gap-2 text-sm leading-6"
                       style={{
                         fontFamily: 'Noto Serif SC, serif',
                         color: '#3d2b1f',
-                        borderBottom: idx < (poem.annotations?.length ?? 0) - 1 ? '1px solid rgba(201,180,154,0.4)' : 'none',
-                        paddingBottom: idx < (poem.annotations?.length ?? 0) - 1 ? '0.5rem' : '0',
+                        borderBottom: idx < (poem.notes?.length ?? 0) - 1 ? '1px solid rgba(201,180,154,0.4)' : 'none',
+                        paddingBottom: idx < (poem.notes?.length ?? 0) - 1 ? '0.5rem' : '0',
                       }}
                     >
                       {/* 菱形符号 */}
@@ -158,7 +158,7 @@ function PoemWithAnnotations({
                       <span>
                         <span style={{ color: '#C0392B', fontWeight: '600' }}>{ann.word}</span>
                         <span style={{ color: '#8B6914' }}>：</span>
-                        {ann.note}
+                        {ann.explanation}
                       </span>
                     </div>
                   ))}
@@ -178,10 +178,10 @@ export default function PoemModal({ poem, location, onClose, onStartGame }: Poem
 
   if (!poem || !location) return null;
 
-  // 将 Annotation[] 转换为 Record<string, string>，方便词语查找
+  // 将 notes[] 转换为 Record<string, string>，方便词语查找
   const annotations: Record<string, string> = {};
-  (poem.annotations ?? []).forEach((a: Annotation) => {
-    annotations[a.word] = a.note;
+  (poem.notes ?? []).forEach((a) => {
+    annotations[a.word] = a.explanation;
   });
 
   return (
@@ -223,7 +223,7 @@ export default function PoemModal({ poem, location, onClose, onStartGame }: Poem
                 {poem.dynasty}
               </span>
               <span className="text-xs text-[#8B6914]" style={{ fontFamily: 'Noto Serif SC, serif' }}>
-                {location.modernName} · {location.ancientName}
+                {location.modernName}
               </span>
             </div>
             <h2
