@@ -133,9 +133,9 @@ export default function Home() {
                 className="text-xs text-[#5a4030] leading-7"
                 style={{ fontFamily: 'Noto Serif SC, serif' }}
               >
-                精讲《送杜少府之任蜀州》
-                <br />辐射长安·江畔水路·边塞
-                <br />探寻唐代送别文化地图
+                折柳处，春风也知离意
+                <br />自长安向江汉与边塞，沿驿路听古人长歌
+                <br />点一处山河，照见千年送别
               </p>
 
               <div className="mt-5 flex items-center gap-1.5 text-xs text-[#8B6914]" style={{ fontFamily: 'Noto Serif SC, serif' }}>
