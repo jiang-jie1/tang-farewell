@@ -438,7 +438,7 @@ export default function TangMap({ onLocationSelect, highlightedLocationId, onMap
         marker.on('click', () => {
           onLocationSelectRef.current(loc);
           map.setCenter([loc.coordinates[0], loc.coordinates[1]]);
-          map.setZoom(7);
+          map.setZoom(9);
         });
 
         marker.setMap(map);
@@ -473,7 +473,7 @@ export default function TangMap({ onLocationSelect, highlightedLocationId, onMap
 
     const map = mapRef.current;
     map.setCenter([location.coordinates[0], location.coordinates[1]]);
-    map.setZoom(7);
+    map.setZoom(9);
 
     // 标注闪烁动画
     const marker = markersRef.current.get(highlightedLocationId);
