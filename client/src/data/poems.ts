@@ -11,7 +11,11 @@ export interface Poem {
   lines: string[];
   notes: { word: string; explanation: string }[];
   appreciation: string;
+<<<<<<< Updated upstream
   trivia: string[];           // 改为数组，支持多条课外知识
+=======
+  trivia: { title: string; content: string }[];
+>>>>>>> Stashed changes
   blanks: number[];
 }
 
