@@ -108,7 +108,7 @@ const lantian: Location = {
   modernName: '陕西西安蓝田',
   description: '蓝田，位于秦岭北麓，王维晚年在此附近的辋川别墅隐居，常于山中送别友人。',
   category: 'jingji',
-  coordinates: [109.3228, 34.1513],
+  coordinates: [109.27, 34.08],
   poems: [
     {
       id: 'shanzhong-songbie',
@@ -143,7 +143,7 @@ const baling: Location = {
   modernName: '西安东郊灞桥区',
   description: '灞陵，汉文帝陵墓所在地，灞河之畔。唐人送别多至灞桥折柳，"灞陵伤别"成为送别文化的重要意象。',
   category: 'jingji',
-  coordinates: [109.1200, 34.3200],
+  coordinates: [109.35, 34.35],
   poems: [
     {
       id: 'baling-xing-songbie',
