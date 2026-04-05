@@ -360,10 +360,9 @@ export default function TangMap({ onLocationSelect, highlightedLocationId, onMap
         markerContent.style.cssText = `
           position: relative;
           cursor: pointer;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          transform: translateX(-50%) translateY(-100%);
+          width: 36px;
+          height: 36px;
+          overflow: visible;
         `;
         markerContent.innerHTML = `
           <div style="
@@ -388,7 +387,10 @@ export default function TangMap({ onLocationSelect, highlightedLocationId, onMap
             "></div>
           </div>
           <div style="
-            margin-top: 6px;
+            position: absolute;
+            top: 42px;
+            left: 50%;
+            transform: translateX(-50%);
             text-align: center;
             pointer-events: none;
           ">
@@ -430,9 +432,9 @@ export default function TangMap({ onLocationSelect, highlightedLocationId, onMap
         const marker = new AMap.Marker({
           position: new AMap.LngLat(loc.coordinates[0], loc.coordinates[1]),
           content: markerContent,
+          anchor: 'bottom-center',
           offset: new AMap.Pixel(0, 0),
           zIndex: 100,
-          title: loc.modernName,
         });
 
         marker.on('click', () => {
