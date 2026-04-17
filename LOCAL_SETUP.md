@@ -6,7 +6,6 @@
 
 - **Node.js** ≥ 18（推荐 22.x）：[nodejs.org](https://nodejs.org/)
 - **pnpm** ≥ 10：安装方法 `npm install -g pnpm`
-- **MySQL** 8.x 或 **TiDB**（用于用户数据存储）
 
 ---
 
@@ -33,16 +32,12 @@ pnpm install
 在项目根目录创建 `.env` 文件，填入以下内容：
 
 ```env
-# ===== 必填：数据库 =====
-# MySQL 连接字符串，格式：mysql://用户名:密码@主机:端口/数据库名
-DATABASE_URL=mysql://root:yourpassword@localhost:3306/tang_farewell_map
-
 # ===== 必填：JWT 密钥（随机字符串，用于 session 签名）=====
 JWT_SECRET=your-random-secret-string-at-least-32-chars
 
 # ===== 必填：高德地图 API Key =====
 # 申请地址：https://lbs.amap.com/ → 控制台 → 应用管理 → 创建应用 → 添加 Key（Web端JS API）
-VITE_AMAP_KEY=your-amap-api-key
+VITE_AMAP_KEY=fabc70172048b6bb96baa3ef8ed59cdd
 
 # ===== 必填：火山引擎豆包 API Key =====
 # 申请地址：https://console.volcengine.com/ark → 开通模型 doubao-seed-2-0-lite-260215 → 获取 API Key
@@ -64,17 +59,7 @@ S3_SECRET_ACCESS_KEY=
 
 ---
 
-## 第四步：初始化数据库
-
-```bash
-pnpm db:push
-```
-
-此命令会在 MySQL 中自动创建所需的数据表（`users` 等）。
-
----
-
-## 第五步：启动开发服务器
+## 第四步：启动开发服务器
 
 ```bash
 pnpm dev
@@ -113,10 +98,6 @@ http://localhost:3000
 ---
 
 ## 常见问题
-
-**Q：启动时报 `DATABASE_URL` 相关错误？**
-
-A：确保 MySQL 服务已启动，且 `.env` 中的连接字符串格式正确。可以先用 `mysql -u root -p` 测试连接是否正常。
 
 **Q：地图显示空白或"加载失败"？**
 
