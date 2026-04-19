@@ -11,7 +11,7 @@
 
 ## 第一步：下载代码
 
-从 Manus 管理界面点击 **"Code"** → **"Download all files"** 下载 ZIP 压缩包，解压后进入项目目录：
+从项目管理界面点击 **"Code"** → **"Download all files"** 下载 ZIP 压缩包，解压后进入项目目录：
 
 ```bash
 cd tang-farewell-map
@@ -43,7 +43,7 @@ VITE_AMAP_KEY=fabc70172048b6bb96baa3ef8ed59cdd
 # 申请地址：https://console.volcengine.com/ark → 开通模型 doubao-seed-2-0-lite-260215 → 获取 API Key
 ARK_API_KEY=73b2152b-af29-4df5-ba2b-fcd4ffe1dff9
 
-# ===== 可选：Manus OAuth（本地开发可留空，智能体对话仍可正常使用）=====
+# ===== 可选：OAuth 登录（本地开发可留空，智能体对话仍可正常使用）=====
 VITE_APP_ID=
 OAUTH_SERVER_URL=
 VITE_OAUTH_PORTAL_URL=
@@ -109,7 +109,7 @@ A：检查 `ARK_API_KEY` 是否正确，并确认火山引擎控制台中 `douba
 
 **Q：不需要用户登录功能，可以跳过 OAuth 配置吗？**
 
-A：可以。Manus OAuth 仅用于用户身份验证，地图、诗词、搜索、填词游戏、智能体对话等核心功能均不需要登录即可使用。
+A：可以。OAuth 登录仅用于用户身份验证，地图、诗词、搜索、填词游戏、智能体对话等核心功能均不需要登录即可使用。
 
 ---
 

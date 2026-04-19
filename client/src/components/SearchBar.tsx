@@ -1,5 +1,5 @@
 /*
- * SearchBar.tsx - 古风搜索栏组件（重构版）
+ * SearchBar.tsx - 古风搜索栏组件
  * 功能：支持搜索古地名/今地名/诗歌名/诗句，高亮显示对应地点
  * 修复：使用 createPortal 渲染下拉框，避免被父容器 overflow:hidden 裁剪
  */

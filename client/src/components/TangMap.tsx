@@ -2,7 +2,6 @@
  * TangMap.tsx - 唐代送别诗地图主组件（高德地图版）
  * 设计：水墨山水·宣纸质感 | 高德地图古风自定义样式
  * 功能：显示现代地图，标注今地名（旁注古地名），点击显示诗词列表
- * 注意：高德地图在中国境内可正常使用，无需科学上网
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react';

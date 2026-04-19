@@ -8,6 +8,8 @@ type UseAuthOptions = {
   redirectPath?: string;
 };
 
+const AUTH_CACHE_KEY = "auth-user-info";
+
 export function useAuth(options?: UseAuthOptions) {
   const { redirectOnUnauthenticated = false, redirectPath = getLoginUrl() } =
     options ?? {};
@@ -42,10 +44,7 @@ export function useAuth(options?: UseAuthOptions) {
   }, [logoutMutation, utils]);
 
   const state = useMemo(() => {
-    localStorage.setItem(
-      "manus-runtime-user-info",
-      JSON.stringify(meQuery.data)
-    );
+    localStorage.setItem(AUTH_CACHE_KEY, JSON.stringify(meQuery.data));
     return {
       user: meQuery.data ?? null,
       loading: meQuery.isLoading || logoutMutation.isPending,

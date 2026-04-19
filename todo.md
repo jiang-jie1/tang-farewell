@@ -69,7 +69,7 @@
 
 - [x] React 19 + TypeScript + Vite
 - [x] Tailwind CSS 4 古风主题
-- [x] Google Maps JavaScript API（通过Manus代理）
+- [x] Google Maps JavaScript API（通过平台代理）
 - [x] tRPC 11 全栈类型安全
 - [x] 内置LLM API（中国境内可用）
 - [x] Vitest 单元测试（5个测试全部通过）
