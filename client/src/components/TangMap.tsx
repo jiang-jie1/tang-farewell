@@ -22,10 +22,18 @@ interface TangMapProps {
 }
 
 const categoryColors: Record<string, string> = {
-  jingji: '#8B4513',   // 深棕色 - 京畿地区
-  biansai: '#4A6741',  // 墨绿色 - 边塞地区
+  jingji: '#c23737',   // 红色 - 京畿地区
+  biansai: '#23671a',  // 墨绿色 - 边塞地区
   jianghan: '#2c5f7a', // 深蓝色 - 江汉水乡
-  other: '#6B4C8B',    // 紫色 - 其他
+  other: '#4823b9',    // 紫色 - 其他
+};
+
+// 地图容器有整体滤镜，标注点使用补偿色以保证视觉上接近 categoryColors
+const categoryCompensatedColors: Record<string, string> = {
+  jingji: '#ff0000',
+  biansai: '#22b500',
+  jianghan: '#007aff',
+  other: '#bb00ff',
 };
 
 const categoryLabels: Record<string, string> = {
@@ -35,182 +43,15 @@ const categoryLabels: Record<string, string> = {
   other: '其他',
 };
 
-// 高德地图古风水墨自定义样式
-// 使用高德内置的"幻影黑"或自定义宣纸色调
-const AMAP_STYLE_FEATURES = [
-  // ──────────── 地形底色 ────────────
-  {
-    featureType: 'background',
-    elementType: 'geometry',
-    stylers: { color: '#f5edd6ff' }, // 宣纸色底色
-  },
-  {
-    featureType: 'land',
-    elementType: 'geometry',
-    stylers: { color: '#ede0c4ff' }, // 浅黄土色
-  },
-  {
-    featureType: 'green',
-    elementType: 'geometry',
-    stylers: { color: '#c8d5a8ff' }, // 淡绿植被
-  },
-  // ──────────── 水域：偏蓝古风色 ────────────
-  {
-    featureType: 'water',
-    elementType: 'geometry',
-    stylers: { color: '#9bbfd4ff' }, // 淡蓝色水域，古风青瓷色调
-  },
-  {
-    featureType: 'water',
-    elementType: 'labels.text.fill',
-    stylers: { color: '#2c5f7aff' }, // 水域名称深蓝色
-  },
-  {
-    featureType: 'water',
-    elementType: 'labels.text.stroke',
-    stylers: { color: '#d4eaf5ff' }, // 水域名称描边淡蓝
-  },
-  // ──────────── 山地：墨色古风 ────────────
-  {
-    featureType: 'mountain',
-    elementType: 'geometry',
-    stylers: { color: '#c5b89aff' }, // 山地底色，偏墨灰
-  },
-  {
-    featureType: 'mountain',
-    elementType: 'labels.text.fill',
-    stylers: { color: '#2d2d2dff' }, // 山名深墨色
-  },
-  {
-    featureType: 'mountain',
-    elementType: 'labels.text.stroke',
-    stylers: { color: '#f0e8d0ff' }, // 山名描边宣纸色
-  },
-  // ──────────── 道路 ────────────
-  {
-    featureType: 'highway',
-    elementType: 'geometry',
-    stylers: { color: '#f3d19cff' },
-  },
-  {
-    featureType: 'highway',
-    elementType: 'geometry.stroke',
-    stylers: { color: '#e9bc62ff' },
-  },
-  {
-    featureType: 'arterial',
-    elementType: 'geometry',
-    stylers: { color: '#fdfcf8ff' },
-  },
-  {
-    featureType: 'local',
-    elementType: 'geometry',
-    stylers: { color: '#f8f1e4ff' },
-  },
-  // ──────────── 隐藏现代交通 ────────────
-  {
-    featureType: 'railway',
-    elementType: 'geometry',
-    stylers: { visibility: 'off' },
-  },
-  {
-    featureType: 'subway',
-    elementType: 'geometry',
-    stylers: { visibility: 'off' },
-  },
-  {
-    featureType: 'building',
-    elementType: 'geometry',
-    stylers: { color: '#e8d5b0ff' },
-  },
-  {
-    featureType: 'poi',
-    elementType: 'geometry',
-    stylers: { color: '#dfd2aeff' },
-  },
-  // ──────────── 行政区划线 ────────────
-  {
-    featureType: 'administrative',
-    elementType: 'geometry',
-    stylers: { color: '#c9b49aff' },
-  },
-  {
-    featureType: 'administrative',
-    elementType: 'labels.text.fill',
-    stylers: { color: '#3d2b1fff' },
-  },
-  {
-    featureType: 'administrative',
-    elementType: 'labels.text.stroke',
-    stylers: { color: '#f5edd6ff' },
-  },
-  // ──────────── 地名标注（全部显示）────────────
-  {
-    featureType: 'label',
-    elementType: 'labels.text.fill',
-    stylers: { color: '#3d2b1fff' },
-  },
-  {
-    featureType: 'label',
-    elementType: 'labels.text.stroke',
-    stylers: { color: '#f5edd6ff' },
-  },
-  // 省级地名：深棕色
-  {
-    featureType: 'province',
-    elementType: 'labels.text.fill',
-    stylers: { color: '#4a2e1aff' },
-  },
-  {
-    featureType: 'province',
-    elementType: 'labels.text.stroke',
-    stylers: { color: '#f5edd6ff' },
-  },
-  // 市级地名：棕色
-  {
-    featureType: 'city',
-    elementType: 'labels.text.fill',
-    stylers: { color: '#5a3e2bff' },
-  },
-  {
-    featureType: 'city',
-    elementType: 'labels.text.stroke',
-    stylers: { color: '#f5edd6ff' },
-  },
-  // 县级地名：淡棕色
-  {
-    featureType: 'district',
-    elementType: 'labels.text.fill',
-    stylers: { color: '#7a5a3aff' },
-  },
-  {
-    featureType: 'district',
-    elementType: 'labels.text.stroke',
-    stylers: { color: '#f5edd6ff' },
-  },
-  // 镇级地名：淡色
-  {
-    featureType: 'town',
-    elementType: 'labels.text.fill',
-    stylers: { color: '#7a5a3aff' },
-  },
-  {
-    featureType: 'town',
-    elementType: 'labels.text.stroke',
-    stylers: { color: '#f5edd6ff' },
-  },
-  // 道路名称
-  {
-    featureType: 'road',
-    elementType: 'labels.text.fill',
-    stylers: { color: '#806b63ff' },
-  },
-  {
-    featureType: 'road',
-    elementType: 'labels.text.stroke',
-    stylers: { color: '#f5edd6ff' },
-  },
-];
+const MIN_MAP_ZOOM = 4;
+const MAX_MAP_ZOOM = 9;
+const BASE_MARKER_ZOOM = 5;
+
+function getMarkerScaleByZoom(zoom: number): number {
+  const clampedZoom = Math.max(MIN_MAP_ZOOM, Math.min(MAX_MAP_ZOOM, zoom));
+  // 在 zoom=5 时保持当前尺寸，放大时同步放大标注与文字。
+  return 1 + (clampedZoom - BASE_MARKER_ZOOM) * 0.2;
+}
 
 // 加载高德地图脚本（使用免费的无密钥模式或申请key）
 // 注意：生产环境请在高德开放平台申请API Key
@@ -265,6 +106,51 @@ export default function TangMap({ onLocationSelect, highlightedLocationId, onMap
     onMapReadyRef.current = onMapReady;
   }, [onMapReady]);
 
+  const applyMarkerScale = useCallback((marker: any, zoom: number) => {
+    const content = marker.getContent?.() as HTMLDivElement | null;
+    if (!content) return;
+
+    const scale = getMarkerScaleByZoom(zoom);
+    const pinSize = Math.max(14, 20 * scale);
+    const dotSize = Math.max(3, 5 * scale);
+    const borderSize = Math.max(1, 1.5 * scale);
+    const labelTop = 24 * scale;
+    const modernFontSize = Math.max(6, 8 * scale);
+    const ancientFontSize = Math.max(5, 6 * scale);
+
+    const pinEl = content.querySelector('[data-role="pin"]') as HTMLDivElement | null;
+    const dotEl = content.querySelector('[data-role="dot"]') as HTMLDivElement | null;
+    const labelWrapEl = content.querySelector('[data-role="label-wrap"]') as HTMLDivElement | null;
+    const modernLabelEl = content.querySelector('[data-role="modern-label"]') as HTMLDivElement | null;
+    const ancientLabelEl = content.querySelector('[data-role="ancient-label"]') as HTMLDivElement | null;
+
+    content.style.width = `${pinSize}px`;
+    content.style.height = `${pinSize}px`;
+
+    if (pinEl) {
+      pinEl.style.width = `${pinSize}px`;
+      pinEl.style.height = `${pinSize}px`;
+      pinEl.style.borderWidth = `${borderSize}px`;
+    }
+    if (dotEl) {
+      dotEl.style.width = `${dotSize}px`;
+      dotEl.style.height = `${dotSize}px`;
+    }
+    if (labelWrapEl) {
+      labelWrapEl.style.top = `${labelTop}px`;
+    }
+    if (modernLabelEl) {
+      modernLabelEl.style.fontSize = `${modernFontSize}px`;
+    }
+    if (ancientLabelEl) {
+      ancientLabelEl.style.fontSize = `${ancientFontSize}px`;
+    }
+  }, []);
+
+  const applyAllMarkerScales = useCallback((zoom: number) => {
+    markersRef.current.forEach(marker => applyMarkerScale(marker, zoom));
+  }, [applyMarkerScale]);
+
   const initMap = useCallback(async () => {
     if (!mapContainerRef.current || mapRef.current) return;
 
@@ -283,10 +169,6 @@ export default function TangMap({ onLocationSelect, highlightedLocationId, onMap
         // 显示背景、道路、地名标注（point）、行政区划边界线（district）
         // 根据《公开地图内容表示规范》，必须显示国界线、省市县边界线
         features: ['bg', 'road', 'point', 'district'],
-        // 应用自定义古風样式
-        customMapStyle: {
-          styleJson: AMAP_STYLE_FEATURES,
-        },
         // 限制地图范围到中亚+东亚（经纬度边界）
         limitBounds: new AMap.Bounds([50, 10], [145, 60]),
         viewMode: '2D',
@@ -295,8 +177,8 @@ export default function TangMap({ onLocationSelect, highlightedLocationId, onMap
         showBuildingBlock: false,
         rotateEnable: false,
         pitchEnable: false,
-        // 限制缩放范围：最小4（中亚+东亚范围），最大9（城市级，不显示铁路/建筑细节）
-        zooms: [4, 9],
+        // 限制缩放范围：最小5（中亚+东亚范围），最大9（城市级，不显示铁路/建筑细节）
+        zooms: [5, 9],
       });
 
       // 添加行政区划边界图层（符合《公开地图内容表示规范》）
@@ -352,59 +234,60 @@ export default function TangMap({ onLocationSelect, highlightedLocationId, onMap
 
       // 添加标注点
       locations.forEach(loc => {
-        const color = categoryColors[loc.category] || '#C0392B';
+        const color = categoryCompensatedColors[loc.category] || '#C0392B';
 
         // 创建自定义标注内容
         const markerContent = document.createElement('div');
         markerContent.style.cssText = `
           position: relative;
           cursor: pointer;
-          width: 36px;
-          height: 36px;
+          width: 20px;
+          height: 20px;
           overflow: visible;
         `;
         markerContent.innerHTML = `
-          <div style="
-            width: 36px;
-            height: 36px;
+          <div data-role="pin" style="
+            width: 20px;
+            height: 20px;
             border-radius: 50% 50% 50% 0;
             transform: rotate(-45deg);
             background: ${color};
-            border: 2.5px solid rgba(255,255,255,0.9);
-            box-shadow: 0 3px 12px rgba(0,0,0,0.3), 0 1px 4px rgba(0,0,0,0.2);
+            filter: saturate(1.6);
+            border: 1.5px solid rgba(255,255,255,0.9);
+            box-shadow: 0 1px 7px rgba(0,0,0,0.25), 0 1px 2px rgba(0,0,0,0.16);
             display: flex;
             align-items: center;
             justify-content: center;
             transition: transform 0.2s, box-shadow 0.2s;
           ">
-            <div style="
-              width: 10px;
-              height: 10px;
+            <div data-role="dot" style="
+              width: 5px;
+              height: 5px;
               border-radius: 50%;
               background: rgba(255,255,255,0.9);
               transform: rotate(45deg);
             "></div>
           </div>
-          <div style="
+          <div data-role="label-wrap" style="
             position: absolute;
-            top: 42px;
+            top: 24px;
             left: 50%;
             transform: translateX(-50%);
             text-align: center;
             pointer-events: none;
           ">
-            <div style="
+            <div data-role="modern-label" style="
               font-family: 'Ma Shan Zheng', serif;
-              font-size: 13px;
+              font-size: 8px;
               font-weight: 600;
               color: #1a1a1a;
               text-shadow: 0 1px 3px rgba(245,237,214,0.95), 0 0 8px rgba(245,237,214,0.9);
               line-height: 1.3;
               white-space: nowrap;
             ">${loc.modernName}</div>
-            <div style="
+            <div data-role="ancient-label" style="
               font-family: 'Noto Serif SC', serif;
-              font-size: 10px;
+              font-size: 6px;
               color: #8B6914;
               text-shadow: 0 1px 2px rgba(245,237,214,0.9);
               white-space: nowrap;
@@ -417,14 +300,14 @@ export default function TangMap({ onLocationSelect, highlightedLocationId, onMap
         const pinEl = markerContent.querySelector('div') as HTMLDivElement;
         markerContent.addEventListener('mouseenter', () => {
           if (pinEl) {
-            pinEl.style.transform = 'rotate(-45deg) scale(1.15)';
-            pinEl.style.boxShadow = `0 6px 20px rgba(0,0,0,0.4), 0 2px 8px ${color}80`;
+            pinEl.style.transform = 'rotate(-45deg) scale(1.05)';
+            pinEl.style.boxShadow = `0 3px 10px rgba(0,0,0,0.3), 0 1px 4px ${color}80`;
           }
         });
         markerContent.addEventListener('mouseleave', () => {
           if (pinEl) {
             pinEl.style.transform = 'rotate(-45deg) scale(1)';
-            pinEl.style.boxShadow = '0 3px 12px rgba(0,0,0,0.3), 0 1px 4px rgba(0,0,0,0.2)';
+            pinEl.style.boxShadow = '0 1px 7px rgba(0,0,0,0.25), 0 1px 2px rgba(0,0,0,0.16)';
           }
         });
 
@@ -446,6 +329,11 @@ export default function TangMap({ onLocationSelect, highlightedLocationId, onMap
         markersRef.current.set(loc.id, marker);
       });
 
+      applyAllMarkerScales(map.getZoom?.() ?? BASE_MARKER_ZOOM);
+      map.on('zoomchange', () => {
+        applyAllMarkerScales(map.getZoom?.() ?? BASE_MARKER_ZOOM);
+      });
+
       setMapLoaded(true);
       onMapReadyRef.current?.();
 
@@ -453,7 +341,7 @@ export default function TangMap({ onLocationSelect, highlightedLocationId, onMap
       console.error('地图初始化失败:', err);
       setLoadError('地图加载失败，请检查网络连接');
     }
-  }, []);
+  }, [applyAllMarkerScales]);
 
   useEffect(() => {
     initMap();
@@ -504,7 +392,7 @@ export default function TangMap({ onLocationSelect, highlightedLocationId, onMap
         ref={mapContainerRef}
         className="w-full h-full"
         style={{
-          filter: mapLoaded ? 'sepia(50%) saturate(65%) brightness(1.04) contrast(0.92) hue-rotate(-5deg)' : 'none',
+          filter: mapLoaded ? 'sepia(68%) saturate(55%) brightness(0.98) contrast(0.88) hue-rotate(-8deg)' : 'none',
           transition: 'filter 0.8s ease',
         }}
       />
