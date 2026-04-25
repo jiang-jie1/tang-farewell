@@ -28,11 +28,11 @@ interface RandomBlank {
   answer: string;
 }
 
-// 生成隨機挖空位置（使用與 poem.blanks 相同的數量）
+// 生成隨機挖空位置（每次在 5 到 10 之間隨機）
 function generateRandomBlanks(poem: Poem): RandomBlank[] {
   const blanks: RandomBlank[] = [];
   const used = new Set<string>();
-  const targetCount = poem.blanks.length;
+  const targetCount = Math.floor(Math.random() * 6) + 5;
 
   // 收集所有可能的挖空位置
   const candidates: RandomBlank[] = [];
